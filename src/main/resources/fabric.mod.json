@@ -1,0 +1,40 @@
+{
+	"schemaVersion": 1,
+	"id": "knowledgebound",
+	"version": "${version}",
+	"name": "Knowledge Bound",
+	"description": "This is a mod changing the ingame progression made by Maxello",
+	"authors": [
+		"Maxello"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "MIT",
+	"icon": "assets/knowledgebound/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"net.maxello.knowledgebound.KnowledgeBound"
+		],
+      "client": [
+        "net.maxello.knowledgebound.KnowledgeBoundClient"
+      ],
+		"fabric-datagen": [
+			"net.maxello.knowledgebound.KnowledgeBoundDataGenerator"
+		]
+	},
+	"mixins": [
+		"knowledgebound.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.17.3",
+		"minecraft": "~1.20.4",
+		"java": ">=17",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
