@@ -21,9 +21,9 @@
       "client": [
         "net.maxello.knowledgebound.KnowledgeBoundClient"
       ],
-		"fabric-datagen": [
-			"net.maxello.knowledgebound.KnowledgeBoundDataGenerator"
-		]
+      "fabric-datagen": [
+        "net.maxello.knowledgebound.KnowledgeBoundDataGenerator"
+      ]
 	},
 	"mixins": [
 		"knowledgebound.mixins.json"

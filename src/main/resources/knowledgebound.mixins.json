@@ -3,7 +3,7 @@
 	"package": "net.maxello.knowledgebound.mixin",
 	"compatibilityLevel": "JAVA_17",
 	"mixins": [
-		"ExampleMixin"
+		"CraftingResultSlotMixin","CraftingScreenHandlerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
