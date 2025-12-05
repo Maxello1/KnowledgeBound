@@ -1,6 +1,5 @@
 package net.maxello.knowledgebound;
 
-import net.maxello.knowledgebound.KnowledgeBound;
 import net.minecraft.util.Identifier;
 
 import java.util.*;
@@ -9,14 +8,25 @@ public class KnowledgeRegistry {
 
     private static final Map<Identifier, KnowledgeDefinition> REGISTRY = new HashMap<>();
 
-    public static final Identifier FORESTRY_ID = new Identifier(KnowledgeBound.MOD_ID, "forestry");
-    public static final Identifier TOOLSMITHING_ID = new Identifier(KnowledgeBound.MOD_ID, "toolsmithing");
-    // TODO: add mining, farming, etc.
+    // Public IDs for material knowledges
+    public static final Identifier FORESTRY_ID =
+            new Identifier(KnowledgeBound.MOD_ID, "forestry");
+    public static final Identifier MINING_ID =
+            new Identifier(KnowledgeBound.MOD_ID, "mining");
+    public static final Identifier DIGGING_ID =
+            new Identifier(KnowledgeBound.MOD_ID, "digging");
+    public static final Identifier FARMING_ID =
+            new Identifier(KnowledgeBound.MOD_ID, "farming");
+    public static final Identifier TOOLSMITHING_ID =
+            new Identifier(KnowledgeBound.MOD_ID, "toolsmithing");
 
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering knowledges…");
 
         register(createForestryDefinition());
+        register(createMiningDefinition());
+        register(createDiggingDefinition());
+        register(createFarmingDefinition());
         register(createToolsmithingDefinition());
     }
 
@@ -32,64 +42,177 @@ public class KnowledgeRegistry {
         return REGISTRY.values();
     }
 
+    // --------------------------------------------------
+    //  Forestry
+    // --------------------------------------------------
+
     private static KnowledgeDefinition createForestryDefinition() {
-        Map<Integer, Integer> tierMinutes = new HashMap<>();
-        // These are example values based on your wiki data
-        tierMinutes.put(1, 60);   // Tier 0 -> 1}
-        tierMinutes.put(2, 120);  // Tier 1 -> 2
-        tierMinutes.put(3, 180);  // guessed
-        tierMinutes.put(4, 240);  // guessed
+        Identifier id = FORESTRY_ID;
+        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
+        int maxTier = 5;
+
+        Map<Integer, Integer> minutesPerTier = new HashMap<>();
+        minutesPerTier.put(1, 60);
+        minutesPerTier.put(2, 120);
+        minutesPerTier.put(3, 240);
+        minutesPerTier.put(4, 480);
+        minutesPerTier.put(5, 960);
 
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
-        xpToolTiers.put(0, Set.of(KnowledgeDefinition.ToolTier.WOOD));
-        xpToolTiers.put(1, Set.of(KnowledgeDefinition.ToolTier.STONE));
-        xpToolTiers.put(2, Set.of(KnowledgeDefinition.ToolTier.COPPER));
-        xpToolTiers.put(3, Set.of(KnowledgeDefinition.ToolTier.IRON));
-        xpToolTiers.put(4, Set.of(KnowledgeDefinition.ToolTier.DIAMOND));
+        xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.WOOD));
+        xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.STONE));
+        xpToolTiers.put(2, EnumSet.of(KnowledgeDefinition.ToolTier.COPPER));
+        xpToolTiers.put(3, EnumSet.of(KnowledgeDefinition.ToolTier.IRON));
+        xpToolTiers.put(4, EnumSet.of(KnowledgeDefinition.ToolTier.DIAMOND));
 
-        List<KnowledgeDefinition.XpAction> xpActions = List.of(
-                new KnowledgeDefinition.XpAction(List.of(
-                        new Identifier("minecraft", "oak_log"),
-                        new Identifier("minecraft", "spruce_log"),
-                        new Identifier("minecraft", "birch_log")
-                        // TODO: add more logs
-                ))
-        );
+        List<KnowledgeDefinition.XpAction> xpActions = List.of();
 
         return new KnowledgeDefinition(
-                FORESTRY_ID,
-                KnowledgeDefinition.Type.SKILL,
-                4,
-                tierMinutes,
+                id,
+                type,
+                maxTier,
+                minutesPerTier,
                 xpToolTiers,
                 xpActions
         );
     }
 
-    private static KnowledgeDefinition createToolsmithingDefinition() {
-        Map<Integer, Integer> tierMinutes = new HashMap<>();
-        tierMinutes.put(1, 60);
-        tierMinutes.put(2, 120);
-        tierMinutes.put(3, 180);
-        tierMinutes.put(4, 240);
+    // --------------------------------------------------
+    //  Mining
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createMiningDefinition() {
+        Identifier id = MINING_ID;
+        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
+        int maxTier = 5;
+
+        Map<Integer, Integer> minutesPerTier = new HashMap<>();
+        minutesPerTier.put(1, 60);
+        minutesPerTier.put(2, 120);
+        minutesPerTier.put(3, 240);
+        minutesPerTier.put(4, 480);
+        minutesPerTier.put(5, 960);
 
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
-        xpToolTiers.put(0, Set.of(KnowledgeDefinition.ToolTier.WOOD));
-        xpToolTiers.put(1, Set.of(KnowledgeDefinition.ToolTier.STONE));
-        xpToolTiers.put(2, Set.of(KnowledgeDefinition.ToolTier.COPPER));
-        xpToolTiers.put(3, Set.of(KnowledgeDefinition.ToolTier.IRON));
-        xpToolTiers.put(4, Set.of(KnowledgeDefinition.ToolTier.DIAMOND));
+        xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.WOOD));
+        xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.STONE));
+        xpToolTiers.put(2, EnumSet.of(KnowledgeDefinition.ToolTier.COPPER));
+        xpToolTiers.put(3, EnumSet.of(KnowledgeDefinition.ToolTier.IRON));
+        xpToolTiers.put(4, EnumSet.of(KnowledgeDefinition.ToolTier.DIAMOND));
 
-        List<KnowledgeDefinition.XpAction> xpActions = List.of(
-                // For toolsmithing you might later tie this to anvils / smithing tables
-                new KnowledgeDefinition.XpAction(List.of())
-        );
+        List<KnowledgeDefinition.XpAction> xpActions = List.of();
 
         return new KnowledgeDefinition(
-                TOOLSMITHING_ID,
-                KnowledgeDefinition.Type.SKILL,
-                4,
-                tierMinutes,
+                id,
+                type,
+                maxTier,
+                minutesPerTier,
+                xpToolTiers,
+                xpActions
+        );
+    }
+
+    // --------------------------------------------------
+    //  Digging (shovel blocks)
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createDiggingDefinition() {
+        Identifier id = DIGGING_ID;
+        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
+        int maxTier = 5;
+
+        Map<Integer, Integer> minutesPerTier = new HashMap<>();
+        minutesPerTier.put(1, 60);
+        minutesPerTier.put(2, 120);
+        minutesPerTier.put(3, 240);
+        minutesPerTier.put(4, 480);
+        minutesPerTier.put(5, 960);
+
+        Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
+        // Same tool progression as Mining
+        xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.WOOD));
+        xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.STONE));
+        xpToolTiers.put(2, EnumSet.of(KnowledgeDefinition.ToolTier.COPPER));
+        xpToolTiers.put(3, EnumSet.of(KnowledgeDefinition.ToolTier.IRON));
+        xpToolTiers.put(4, EnumSet.of(KnowledgeDefinition.ToolTier.DIAMOND));
+
+        List<KnowledgeDefinition.XpAction> xpActions = List.of();
+
+        return new KnowledgeDefinition(
+                id,
+                type,
+                maxTier,
+                minutesPerTier,
+                xpToolTiers,
+                xpActions
+        );
+    }
+
+    // --------------------------------------------------
+    //  Farming
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createFarmingDefinition() {
+        Identifier id = FARMING_ID;
+        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
+        int maxTier = 5;
+
+        Map<Integer, Integer> minutesPerTier = new HashMap<>();
+        minutesPerTier.put(1, 60);
+        minutesPerTier.put(2, 120);
+        minutesPerTier.put(3, 240);
+        minutesPerTier.put(4, 480);
+        minutesPerTier.put(5, 960);
+
+        Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
+        xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.FIST, KnowledgeDefinition.ToolTier.WOOD));
+        xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.WOOD, KnowledgeDefinition.ToolTier.STONE));
+        xpToolTiers.put(2, EnumSet.of(KnowledgeDefinition.ToolTier.STONE, KnowledgeDefinition.ToolTier.COPPER));
+        xpToolTiers.put(3, EnumSet.of(KnowledgeDefinition.ToolTier.COPPER, KnowledgeDefinition.ToolTier.IRON));
+        xpToolTiers.put(4, EnumSet.of(KnowledgeDefinition.ToolTier.IRON, KnowledgeDefinition.ToolTier.DIAMOND));
+
+        List<KnowledgeDefinition.XpAction> xpActions = List.of();
+
+        return new KnowledgeDefinition(
+                id,
+                type,
+                maxTier,
+                minutesPerTier,
+                xpToolTiers,
+                xpActions
+        );
+    }
+
+    // --------------------------------------------------
+    //  Toolsmithing
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createToolsmithingDefinition() {
+        Identifier id = TOOLSMITHING_ID;
+        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
+        int maxTier = 5;
+
+        Map<Integer, Integer> minutesPerTier = new HashMap<>();
+        minutesPerTier.put(1, 60);
+        minutesPerTier.put(2, 120);
+        minutesPerTier.put(3, 240);
+        minutesPerTier.put(4, 480);
+        minutesPerTier.put(5, 960);
+
+        Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
+        xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.WOOD));
+        xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.STONE));
+        xpToolTiers.put(2, EnumSet.of(KnowledgeDefinition.ToolTier.COPPER));
+        xpToolTiers.put(3, EnumSet.of(KnowledgeDefinition.ToolTier.IRON));
+        xpToolTiers.put(4, EnumSet.of(KnowledgeDefinition.ToolTier.DIAMOND));
+
+        List<KnowledgeDefinition.XpAction> xpActions = List.of();
+
+        return new KnowledgeDefinition(
+                id,
+                type,
+                maxTier,
+                minutesPerTier,
                 xpToolTiers,
                 xpActions
         );

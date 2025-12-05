@@ -1,10 +1,7 @@
 package net.maxello.knowledgebound;
 
-
-import net.maxello.knowledgebound.KnowledgeBound;
-import net.maxello.knowledgebound.KnowledgeDefinition;
-import net.maxello.knowledgebound.KnowledgeRegistry;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.HashMap;
@@ -25,6 +22,7 @@ public class PlayerKnowledgeManager {
         }
     }
 
+    // In-memory storage: per-player, per-knowledge state
     private static final Map<UUID, Map<Identifier, PlayerKnowledgeState>> PLAYER_DATA = new HashMap<>();
 
     public static void init() {
@@ -40,6 +38,10 @@ public class PlayerKnowledgeManager {
         return map.computeIfAbsent(knowledgeId, id -> new PlayerKnowledgeState());
     }
 
+    /**
+     * Grants 1 "minute" of XP if at least one real-time minute has passed
+     * since the last gain for this knowledge.
+     */
     public static void grantMinuteIfAllowed(ServerPlayerEntity player, Identifier knowledgeId) {
         KnowledgeDefinition def = KnowledgeRegistry.get(knowledgeId);
         if (def == null) return;
@@ -47,6 +49,7 @@ public class PlayerKnowledgeManager {
         PlayerKnowledgeState state = getState(player, knowledgeId);
         long currentMinute = player.getWorld().getTime() / (20L * 60L);
 
+        // Only one XP tick per real-time minute per knowledge
         if (currentMinute <= state.lastXpMinuteIndex) {
             return;
         }
@@ -54,20 +57,29 @@ public class PlayerKnowledgeManager {
         state.lastXpMinuteIndex = currentMinute;
         state.currentMinutes += 1;
 
-        // 🔧 TEMP DEBUG: show that XP was gained
-        player.sendMessage(
-                net.minecraft.text.Text.literal(
-                        "[KB] +1 minute in " + knowledgeId.getPath() +
-                                " (" + state.currentMinutes + " / " + def.getMinutesForTier(state.tier + 1) + ")"
-                ),
-                false
-        );
+        // Action bar feedback for XP gained
+        int nextTier = state.tier + 1;
+        int neededForNext = (nextTier <= def.getMaxTier())
+                ? def.getMinutesForTier(nextTier)
+                : 0;
+
+        if (neededForNext > 0) {
+            player.sendMessage(
+                    Text.literal(
+                            "[KB] +1 minute in " + knowledgeId.getPath() +
+                                    " (" + state.currentMinutes + " / " + neededForNext + ")"
+                    ),
+                    true // action bar
+            );
+        }
 
         tryLevelUp(player, knowledgeId, def, state);
     }
 
-
-    private static void tryLevelUp(ServerPlayerEntity player, Identifier knowledgeId, KnowledgeDefinition def, PlayerKnowledgeState state) {
+    private static void tryLevelUp(ServerPlayerEntity player,
+                                   Identifier knowledgeId,
+                                   KnowledgeDefinition def,
+                                   PlayerKnowledgeState state) {
         int currentTier = state.tier;
         if (currentTier >= def.getMaxTier()) {
             return;
@@ -80,13 +92,15 @@ public class PlayerKnowledgeManager {
         if (state.currentMinutes >= needed) {
             state.currentMinutes -= needed;
             state.tier = nextTier;
-            player.sendMessage(
-                    net.minecraft.text.Text.literal(
-                            "Knowledge increased in " + knowledgeId.getPath() + " (Tier " + nextTier + ")"
-                    ),
-                    false
-            );
 
+            // Action bar feedback for tier up
+            player.sendMessage(
+                    Text.literal(
+                            "Knowledge increased in " + knowledgeId.getPath() +
+                                    " (Tier " + nextTier + ")"
+                    ),
+                    true // action bar
+            );
         }
     }
 

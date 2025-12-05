@@ -28,12 +28,7 @@ public class CraftingRuleRegistry {
     private static void registerWoodenToolRules() {
         Map<Integer, CraftingKnowledgeRule.TierChance> tierChances = new HashMap<>();
 
-        // For testing: 100% FAIL at tier 0
-        tierChances.put(0, new CraftingKnowledgeRule.TierChance(0.0, 0.0));
-
-        // Later you can change to:
-        // tierChances.put(0, new CraftingKnowledgeRule.TierChance(0.20, 0.40));
-
+        tierChances.put(0, new CraftingKnowledgeRule.TierChance(0.20, 0.40)); // Tier 0: 20% success, 40% poor
         CraftingKnowledgeRule rule = new CraftingKnowledgeRule(
                 new Identifier(KnowledgeBound.MOD_ID, "wooden_tool_crafting"),
                 KnowledgeRegistry.TOOLSMITHING_ID,
