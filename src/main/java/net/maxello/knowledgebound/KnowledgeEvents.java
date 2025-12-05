@@ -142,14 +142,67 @@ public class KnowledgeEvents {
                                            Identifier itemId,
                                            ItemStack originalStack) {
 
+        // 1) Apply crafting rule (poor / fail / normal) if one exists
         CraftingKnowledgeRule rule = CraftingRuleRegistry.getForItem(itemId);
-        if (rule == null) {
-            return originalStack;
+        ItemStack result = originalStack;
+
+        if (rule != null) {
+            int tier = PlayerKnowledgeManager.getTier(player, rule.getKnowledgeId());
+            result = rule.apply(player, itemId, originalStack, tier);
         }
 
-        int tier = PlayerKnowledgeManager.getTier(player, rule.getKnowledgeId());
-        return rule.apply(player, itemId, originalStack, tier);
+        // 2) Grant smithing XP (only if something was actually crafted)
+        if (!result.isEmpty()) {
+            grantSmithingXp(player, itemId);
+        }
+
+        return result;
     }
+// ----------------------------------------------------------------------
+// Smithing XP helpers (tool / weapon / armour crafting)
+// ----------------------------------------------------------------------
+
+    private static void grantSmithingXp(ServerPlayerEntity player, Identifier itemId) {
+        String path = itemId.getPath();
+
+        if (isToolItem(path)) {
+            PlayerKnowledgeManager.grantMinuteIfAllowed(player, KnowledgeRegistry.TOOLSMITHING_ID);
+        }
+
+        if (isWeaponItem(path)) {
+            PlayerKnowledgeManager.grantMinuteIfAllowed(player, KnowledgeRegistry.WEAPONSMITHING_ID);
+        }
+
+        if (isArmorItem(path)) {
+            PlayerKnowledgeManager.grantMinuteIfAllowed(player, KnowledgeRegistry.ARMOURING_ID);
+        }
+    }
+
+    private static boolean isToolItem(String path) {
+        // Vanilla tools: pickaxe, axe, shovel, hoe
+        return path.endsWith("_pickaxe")
+                || path.endsWith("_axe")
+                || path.endsWith("_shovel")
+                || path.endsWith("_hoe");
+    }
+
+    private static boolean isWeaponItem(String path) {
+        // Swords + ranged weapons; axes can double as tools so we keep them in tools
+        return path.endsWith("_sword")
+                || path.equals("bow")
+                || path.equals("crossbow")
+                || path.equals("trident");
+    }
+
+    private static boolean isArmorItem(String path) {
+        // Standard armor pieces
+        return path.endsWith("_helmet")
+                || path.endsWith("_chestplate")
+                || path.endsWith("_leggings")
+                || path.endsWith("_boots")
+                || path.equals("turtle_helmet");
+    }
+
 
     // ----------------------------------------------------------------------
     // Tool tier helper
