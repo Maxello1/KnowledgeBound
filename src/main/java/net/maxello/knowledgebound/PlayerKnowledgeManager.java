@@ -3,7 +3,8 @@ package net.maxello.knowledgebound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-
+import net.minecraft.text.Text;
+import net.maxello.knowledgebound.KnowledgeBoundTextFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -64,14 +65,22 @@ public class PlayerKnowledgeManager {
                 : 0;
 
         if (neededForNext > 0) {
-            player.sendMessage(
-                    Text.literal(
-                            "[KB] +1 minute in " + knowledgeId.getPath() +
-                                    " (" + state.currentMinutes + " / " + neededForNext + ")"
-                    ),
-                    true // action bar
-            );
+            // Do not spam "You're learning ..." for smithing knowledges,
+            // so we don't overwrite the crafting quality messages.
+            boolean isSmithingKnowledge =
+                    knowledgeId.equals(KnowledgeRegistry.TOOLSMITHING_ID) ||
+                            knowledgeId.equals(KnowledgeRegistry.WEAPONSMITHING_ID) ||
+                            knowledgeId.equals(KnowledgeRegistry.ARMOURING_ID);
+
+            if (!isSmithingKnowledge) {
+                player.sendMessage(
+                        KnowledgeBoundTextFormatter.learningTick(knowledgeId),
+                        true // action bar
+                );
+            }
         }
+
+
 
         tryLevelUp(player, knowledgeId, def, state);
     }
@@ -95,12 +104,10 @@ public class PlayerKnowledgeManager {
 
             // Action bar feedback for tier up
             player.sendMessage(
-                    Text.literal(
-                            "Knowledge increased in " + knowledgeId.getPath() +
-                                    " (Tier " + nextTier + ")"
-                    ),
-                    true // action bar
+                    KnowledgeBoundTextFormatter.levelUp(knowledgeId, nextTier),
+                    true
             );
+
         }
     }
 
