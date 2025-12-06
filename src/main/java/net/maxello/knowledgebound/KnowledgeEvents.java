@@ -2,11 +2,16 @@ package net.maxello.knowledgebound;
 
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+
+import java.util.Random;
 
 /**
  * Handles block-break XP for material knowledges and the crafting hook
@@ -14,63 +19,130 @@ import net.minecraft.util.Identifier;
  */
 public class KnowledgeEvents {
 
+    private static final Random RANDOM = new Random();
+
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering events…");
-        registerBlockBreakXp();
+        registerBlockBreakXpAndFailure();
     }
 
     // ----------------------------------------------------------------------
-    // Block break XP (Forestry, Mining, Digging, Farming)
+    // Block break XP + failure (Forestry, Mining, Digging, Farming)
     // ----------------------------------------------------------------------
 
-    private static void registerBlockBreakXp() {
-        PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
-            if (!(player instanceof ServerPlayerEntity serverPlayer)) return;
+    private static void registerBlockBreakXpAndFailure() {
+        PlayerBlockBreakEvents.BEFORE.register((world, player, pos, state, blockEntity) -> {
+            if (!(player instanceof ServerPlayerEntity serverPlayer)) return true;
 
             Block block = state.getBlock();
             Identifier blockId = Registries.BLOCK.getId(block);
 
-            // --- Forestry: logs & wood ---
+            // We handle at most one knowledge per block type.
             if (isForestryBlock(blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FORESTRY_ID);
                 if (def != null) {
-                    KnowledgeDefinition.ToolTier toolTier =
-                            ToolTierHelper.fromItem(serverPlayer.getMainHandStack());
-                    grantXpIfValidTool(serverPlayer, def, toolTier);
+                    return handleGatherBlock(world, serverPlayer, pos, state, def);
                 }
-            }
-
-            // --- Mining: stone, ores, deepslate, etc. ---
-            if (isMiningBlock(blockId)) {
+            } else if (isMiningBlock(blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.MINING_ID);
                 if (def != null) {
-                    KnowledgeDefinition.ToolTier toolTier =
-                            ToolTierHelper.fromItem(serverPlayer.getMainHandStack());
-                    grantXpIfValidTool(serverPlayer, def, toolTier);
+                    return handleGatherBlock(world, serverPlayer, pos, state, def);
                 }
-            }
-
-            // --- Digging: shovel blocks (dirt, sand, gravel, etc.) ---
-            if (isDiggingBlock(blockId)) {
+            } else if (isDiggingBlock(blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.DIGGING_ID);
                 if (def != null) {
-                    KnowledgeDefinition.ToolTier toolTier =
-                            ToolTierHelper.fromItem(serverPlayer.getMainHandStack());
-                    grantXpIfValidTool(serverPlayer, def, toolTier);
+                    return handleGatherBlock(world, serverPlayer, pos, state, def);
+                }
+            } else if (isFarmingBlock(blockId)) {
+                KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FARMING_ID);
+                if (def != null) {
+                    return handleGatherBlock(world, serverPlayer, pos, state, def);
                 }
             }
 
-            // --- Farming: crops ---
-            if (isFarmingBlock(blockId)) {
-                KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FARMING_ID);
-                if (def != null) {
-                    KnowledgeDefinition.ToolTier toolTier =
-                            ToolTierHelper.fromItem(serverPlayer.getMainHandStack());
-                    grantXpIfValidTool(serverPlayer, def, toolTier);
-                }
-            }
+            // Not one of our knowledge blocks → vanilla behaviour.
+            return true;
         });
     }
+
+    /**
+     * Apply knowledge failure + XP for a single gatherable block.
+     *
+     * @return true  → allow vanilla to break & drop items
+     *         false → we've already broken the block (no drops), cancel vanilla
+     */
+    private static boolean handleGatherBlock(World world,
+                                             ServerPlayerEntity player,
+                                             BlockPos pos,
+                                             BlockState state,
+                                             KnowledgeDefinition def) {
+
+        // Determine current tier & failure chance
+        int tier = PlayerKnowledgeManager.getTier(player, def.getId());
+        double failChance = getGatherFailChance(def, tier);
+        boolean fail = RANDOM.nextDouble() < failChance;
+
+        if (fail) {
+            // "Scuffed" gather: block breaks, but no drops and no XP.
+            if (!world.isClient()) {
+                world.breakBlock(pos, false, player); // false -> no item drops
+
+                // Red message: "Your Forestry attempt failed to yield any resources."
+                player.sendMessage(
+                        KnowledgeBoundTextFormatter.gatheringFail(def.getId()),
+                        true
+                );
+            }
+            return false; // cancel vanilla breaking, we already did it
+        }
+
+        // Success: let vanilla handle breaking + drops, and grant XP.
+        KnowledgeDefinition.ToolTier toolTier =
+                ToolTierHelper.fromItem(player.getMainHandStack());
+        grantXpIfValidTool(player, def, toolTier);
+
+        return true;
+    }
+
+
+    // -----------------------------
+    // Fail chance per tier
+    // -----------------------------
+
+    /**
+     * Chance that a gather action yields no drops, per tier.
+     * Applies to Forestry, Mining, Digging, Farming.
+     *
+     * Tier 0: 40% fail
+     * Tier 1: 25% fail
+     * Tier 2: 10% fail
+     * Tier 3:  5% fail
+     * Tier 4+: 2% fail
+     */
+    private static double getGatherFailChance(KnowledgeDefinition def, int tier) {
+        Identifier id = def.getId();
+
+        // Only our four gather knowledges use this mechanic.
+        if (!(id.equals(KnowledgeRegistry.FORESTRY_ID)
+                || id.equals(KnowledgeRegistry.MINING_ID)
+                || id.equals(KnowledgeRegistry.DIGGING_ID)
+                || id.equals(KnowledgeRegistry.FARMING_ID))) {
+            return 0.0;
+        }
+
+        int clamped = Math.max(0, Math.min(tier, 4));
+        return switch (clamped) {
+            case 0 -> 0.40;
+            case 1 -> 0.25;
+            case 2 -> 0.10;
+            case 3 -> 0.05;
+            default -> 0.02;
+        };
+    }
+
+    // -----------------------------
+    // Block type checks
+    // -----------------------------
 
     private static boolean isForestryBlock(Identifier blockId) {
         String path = blockId.getPath();
@@ -81,7 +153,6 @@ public class KnowledgeEvents {
 
         return vanilla || matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraForestryBlocks);
     }
-
 
     private static boolean isMiningBlock(Identifier blockId) {
         String path = blockId.getPath();
@@ -100,7 +171,6 @@ public class KnowledgeEvents {
         return stoneLike || oreLike
                 || matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraMiningBlocks);
     }
-
 
     private static boolean isDiggingBlock(Identifier blockId) {
         boolean vanilla =
@@ -125,7 +195,6 @@ public class KnowledgeEvents {
         return vanilla || matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraDiggingBlocks);
     }
 
-
     private static boolean isFarmingBlock(Identifier blockId) {
         boolean vanilla =
                 blockId.equals(Registries.BLOCK.getId(Blocks.WHEAT)) ||
@@ -138,6 +207,19 @@ public class KnowledgeEvents {
         return vanilla || matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraFarmingBlocks);
     }
 
+    private static boolean matchesExtraBlock(Identifier blockId, java.util.List<String> ids) {
+        String full = blockId.toString();
+        for (String s : ids) {
+            if (full.equals(s)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ----------------------------------------------------------------------
+    // XP helper
+    // ----------------------------------------------------------------------
 
     private static void grantXpIfValidTool(ServerPlayerEntity player,
                                            KnowledgeDefinition def,
@@ -172,9 +254,10 @@ public class KnowledgeEvents {
 
         return result;
     }
-// ----------------------------------------------------------------------
-// Smithing XP helpers (tool / weapon / armour crafting)
-// ----------------------------------------------------------------------
+
+    // ----------------------------------------------------------------------
+    // Smithing XP helpers (tool / weapon / armour crafting)
+    // ----------------------------------------------------------------------
 
     private static void grantSmithingXp(ServerPlayerEntity player, Identifier itemId) {
         String path = itemId.getPath();
@@ -193,7 +276,6 @@ public class KnowledgeEvents {
     }
 
     private static boolean isToolItem(String path) {
-        // Vanilla tools: pickaxe, axe, shovel, hoe
         return path.endsWith("_pickaxe")
                 || path.endsWith("_axe")
                 || path.endsWith("_shovel")
@@ -201,7 +283,6 @@ public class KnowledgeEvents {
     }
 
     private static boolean isWeaponItem(String path) {
-        // Swords + ranged weapons; axes can double as tools so we keep them in tools
         return path.endsWith("_sword")
                 || path.equals("bow")
                 || path.equals("crossbow")
@@ -209,14 +290,12 @@ public class KnowledgeEvents {
     }
 
     private static boolean isArmorItem(String path) {
-        // Standard armor pieces
         return path.endsWith("_helmet")
                 || path.endsWith("_chestplate")
                 || path.endsWith("_leggings")
                 || path.endsWith("_boots")
                 || path.equals("turtle_helmet");
     }
-
 
     // ----------------------------------------------------------------------
     // Tool tier helper
@@ -241,15 +320,4 @@ public class KnowledgeEvents {
             return KnowledgeDefinition.ToolTier.UNKNOWN;
         }
     }
-
-    private static boolean matchesExtraBlock(Identifier blockId, java.util.List<String> ids) {
-        String full = blockId.toString();
-        for (String s : ids) {
-            if (full.equals(s)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
 }

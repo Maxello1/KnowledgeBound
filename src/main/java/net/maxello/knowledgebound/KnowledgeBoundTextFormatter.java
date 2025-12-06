@@ -68,5 +68,12 @@ public final class KnowledgeBoundTextFormatter {
         return Text.literal("Your smithing attempt failed to yield any items.")
                 .formatted(Formatting.RED);
     }
+    /** Red message for gather failures: Forestry, Mining, Digging, Farming. */
+    public static Text gatheringFail(Identifier knowledgeId) {
+        String name = displayName(knowledgeId);
+        return Text.literal("Your " + name + " attempt failed to yield any resources.")
+                .formatted(Formatting.RED);
+    }
+
 
 }
