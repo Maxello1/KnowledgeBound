@@ -56,13 +56,19 @@ public class KnowledgeRegistry {
 
     private static Map<Integer, Integer> defaultMinutesPerTier() {
         Map<Integer, Integer> minutesPerTier = new HashMap<>();
-        minutesPerTier.put(1, 60);
-        minutesPerTier.put(2, 120);
-        minutesPerTier.put(3, 240);
-        minutesPerTier.put(4, 480);
-        minutesPerTier.put(5, 960);
+
+        double m = KnowledgeBoundConfig.INSTANCE.minutesMultiplier;
+        int[] base = {60, 120, 240, 480, 960}; // tiers 1–5
+
+        for (int i = 0; i < base.length; i++) {
+            int tier = i + 1;
+            int value = (int) Math.round(base[i] * m);
+            minutesPerTier.put(tier, Math.max(1, value));
+        }
+
         return minutesPerTier;
     }
+
 
     private static Map<Integer, Set<KnowledgeDefinition.ToolTier>> defaultMaterialTierProgression() {
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();

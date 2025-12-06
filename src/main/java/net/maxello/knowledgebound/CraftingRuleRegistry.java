@@ -20,6 +20,7 @@ public class CraftingRuleRegistry {
         return RULES_BY_ITEM.get(itemId);
     }
 
+    /** Basic helper: register a rule for a set of item IDs. */
     private static void register(CraftingKnowledgeRule rule, Identifier... itemIds) {
         for (Identifier itemId : itemIds) {
             RULES_BY_ITEM.put(itemId, rule);
@@ -33,8 +34,7 @@ public class CraftingRuleRegistry {
     private static void registerWoodenToolRules() {
         Map<Integer, CraftingKnowledgeRule.TierChance> tierChances = new HashMap<>();
 
-        // TODO: tweak these chances to taste.
-        // Example: at Tier 0 you often fail, sometimes get poor tools, rarely good ones.
+        // Example chances – tweak to taste.
         tierChances.put(0, new CraftingKnowledgeRule.TierChance(0.20, 0.40)); // 20% good, 40% poor, 40% fail
         tierChances.put(1, new CraftingKnowledgeRule.TierChance(0.40, 0.40)); // 40% good, 40% poor, 20% fail
         tierChances.put(2, new CraftingKnowledgeRule.TierChance(0.60, 0.30)); // 60% good, 30% poor, 10% fail
@@ -48,6 +48,7 @@ public class CraftingRuleRegistry {
                 tierChances
         );
 
+        // Vanilla wooden tools
         register(
                 rule,
                 new Identifier("minecraft", "wooden_sword"),
@@ -56,6 +57,16 @@ public class CraftingRuleRegistry {
                 new Identifier("minecraft", "wooden_shovel"),
                 new Identifier("minecraft", "wooden_hoe")
         );
+
+        // Extra tool items from config (e.g. modded wooden tools)
+        for (String idStr : KnowledgeBoundConfig.INSTANCE.extraToolItems) {
+            try {
+                Identifier id = new Identifier(idStr);
+                RULES_BY_ITEM.put(id, rule);
+            } catch (Exception e) {
+                KnowledgeBound.LOGGER.warn("[KnowledgeBound] Invalid extraToolItems id in config: {}", idStr);
+            }
+        }
     }
 
     // --------------------------------------------------
@@ -65,7 +76,7 @@ public class CraftingRuleRegistry {
     private static void registerArmorRules() {
         Map<Integer, CraftingKnowledgeRule.TierChance> tierChances = new HashMap<>();
 
-        // Same shape as tools – you can tune independently if you want.
+        // Same shape as tools for now – can be tuned separately if you want.
         tierChances.put(0, new CraftingKnowledgeRule.TierChance(0.20, 0.40));
         tierChances.put(1, new CraftingKnowledgeRule.TierChance(0.40, 0.40));
         tierChances.put(2, new CraftingKnowledgeRule.TierChance(0.60, 0.30));
@@ -79,6 +90,7 @@ public class CraftingRuleRegistry {
                 tierChances
         );
 
+        // Vanilla armor set
         register(
                 rule,
                 // Leather
@@ -120,5 +132,15 @@ public class CraftingRuleRegistry {
                 // Misc
                 new Identifier("minecraft", "turtle_helmet")
         );
+
+        // Extra armor items from config (e.g. modded armor)
+        for (String idStr : KnowledgeBoundConfig.INSTANCE.extraArmorItems) {
+            try {
+                Identifier id = new Identifier(idStr);
+                RULES_BY_ITEM.put(id, rule);
+            } catch (Exception e) {
+                KnowledgeBound.LOGGER.warn("[KnowledgeBound] Invalid extraArmorItems id in config: {}", idStr);
+            }
+        }
     }
 }

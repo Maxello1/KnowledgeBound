@@ -13,10 +13,13 @@ public class KnowledgeBound implements ModInitializer {
     public void onInitialize() {
         LOGGER.info("[KnowledgeBound] Initializing…");
 
+        // Load config before registries
+        KnowledgeBoundConfig.load();
+
         KnowledgeRegistry.init();
         CraftingRuleRegistry.init();
+        PlayerKnowledgeManager.init();
         KnowledgeEvents.init();
-
-        LOGGER.info("[KnowledgeBound] Initialization complete.");
+        KnowledgeCommands.init();
     }
 }

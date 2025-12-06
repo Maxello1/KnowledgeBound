@@ -74,56 +74,70 @@ public class KnowledgeEvents {
 
     private static boolean isForestryBlock(Identifier blockId) {
         String path = blockId.getPath();
-        return path.endsWith("_log")
+        boolean vanilla = path.endsWith("_log")
                 || path.endsWith("_wood")
                 || path.endsWith("_stem")
                 || path.endsWith("_hyphae");
+
+        return vanilla || matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraForestryBlocks);
     }
+
 
     private static boolean isMiningBlock(Identifier blockId) {
         String path = blockId.getPath();
 
-        if (path.equals("stone")
-                || path.equals("deepslate")
-                || path.equals("netherrack")
-                || path.equals("blackstone")
-                || path.equals("tuff")) {
-            return true;
-        }
+        boolean stoneLike =
+                path.equals("stone") ||
+                        path.equals("deepslate") ||
+                        path.equals("netherrack") ||
+                        path.equals("blackstone") ||
+                        path.equals("tuff");
 
-        return path.endsWith("_ore")
-                || path.equals("gilded_blackstone");
+        boolean oreLike =
+                path.endsWith("_ore") ||
+                        path.equals("gilded_blackstone");
+
+        return stoneLike || oreLike
+                || matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraMiningBlocks);
     }
+
 
     private static boolean isDiggingBlock(Identifier blockId) {
-        // Classic shovel blocks
-        return blockId.equals(Registries.BLOCK.getId(Blocks.DIRT))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.COARSE_DIRT))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.ROOTED_DIRT))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.GRASS_BLOCK))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.PODZOL))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.MYCELIUM))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.MUD))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.MUDDY_MANGROVE_ROOTS))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.SAND))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.RED_SAND))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.GRAVEL))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.CLAY))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.SNOW))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.SNOW_BLOCK))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.POWDER_SNOW))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.SOUL_SAND))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.SOUL_SOIL));
+        boolean vanilla =
+                blockId.equals(Registries.BLOCK.getId(Blocks.DIRT)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.COARSE_DIRT)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.ROOTED_DIRT)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.GRASS_BLOCK)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.PODZOL)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.MYCELIUM)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.MUD)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.MUDDY_MANGROVE_ROOTS)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.SAND)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.RED_SAND)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.GRAVEL)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.CLAY)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.SNOW)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.SNOW_BLOCK)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.POWDER_SNOW)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.SOUL_SAND)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.SOUL_SOIL));
+
+        return vanilla || matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraDiggingBlocks);
     }
 
+
     private static boolean isFarmingBlock(Identifier blockId) {
-        return blockId.equals(Registries.BLOCK.getId(Blocks.WHEAT))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.CARROTS))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.POTATOES))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.BEETROOTS))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.MELON_STEM))
-                || blockId.equals(Registries.BLOCK.getId(Blocks.PUMPKIN_STEM));
+        boolean vanilla =
+                blockId.equals(Registries.BLOCK.getId(Blocks.WHEAT)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.CARROTS)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.POTATOES)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.BEETROOTS)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.MELON_STEM)) ||
+                        blockId.equals(Registries.BLOCK.getId(Blocks.PUMPKIN_STEM));
+
+        return vanilla || matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraFarmingBlocks);
     }
+
 
     private static void grantXpIfValidTool(ServerPlayerEntity player,
                                            KnowledgeDefinition def,
@@ -227,4 +241,15 @@ public class KnowledgeEvents {
             return KnowledgeDefinition.ToolTier.UNKNOWN;
         }
     }
+
+    private static boolean matchesExtraBlock(Identifier blockId, java.util.List<String> ids) {
+        String full = blockId.toString();
+        for (String s : ids) {
+            if (full.equals(s)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }
