@@ -7,18 +7,12 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
-import net.minecraft.registry.tag.DamageTypeTags;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -37,6 +31,7 @@ public class KnowledgeEvents {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering events…");
         registerBlockBreakXpAndFailure();
         registerRangedCombatXp();
+        registerMeleeCombatXp();
     }
 
     // ----------------------------------------------------------------------
@@ -212,6 +207,45 @@ public class KnowledgeEvents {
     // ----------------------------------------------------------------------
     // Ranged Combat XP (bow / crossbow hits)
     // ----------------------------------------------------------------------
+    private static void registerMeleeCombatXp() {
+        ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
+            // Ignore non-positive damage
+            if (amount <= 0.0f) {
+                return true;
+            }
+
+            // Skip projectile damage – that's handled by ranged combat
+            if (source.isIn(DamageTypeTags.IS_PROJECTILE)) {
+                return true;
+            }
+
+            Entity attacker = source.getAttacker();
+            if (!(attacker instanceof ServerPlayerEntity player)) {
+                return true;
+            }
+
+            KnowledgeDefinition meleeDef =
+                    KnowledgeRegistry.get(KnowledgeRegistry.MELEE_COMBAT_ID);
+            if (meleeDef == null) {
+                return true;
+            }
+
+            // Only count sword hits for now (you said "sword" explicitly)
+            ItemStack held = player.getMainHandStack();
+            if (!isSwordItem(held)) {
+                return true;
+            }
+
+            // Map the sword material to WOOD / STONE / IRON / DIAMOND, etc.
+            KnowledgeDefinition.ToolTier toolTier =
+                    ToolTierHelper.fromItem(held);
+
+            // Grant XP if this tool tier is valid for current melee tier
+            grantXpIfValidTool(player, meleeDef, toolTier);
+
+            return true; // never cancel damage
+        });
+    }
 
     private static void registerRangedCombatXp() {
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
@@ -323,6 +357,11 @@ public class KnowledgeEvents {
                 || path.equals("bow")
                 || path.equals("crossbow")
                 || path.equals("trident");
+    }
+    private static boolean isSwordItem(ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        String path = stack.getItem().toString();
+        return path.endsWith("_sword");
     }
 
     private static boolean isArmorItem(String path) {

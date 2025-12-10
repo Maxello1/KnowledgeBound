@@ -30,6 +30,9 @@ public class KnowledgeRegistry {
     public static final Identifier FISHING_ID =
             new Identifier(KnowledgeBound.MOD_ID, "fishing");
 
+    public static final Identifier MELEE_COMBAT_ID =
+            new Identifier(KnowledgeBound.MOD_ID, "melee_combat");
+
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering knowledges…");
 
@@ -43,7 +46,8 @@ public class KnowledgeRegistry {
         register(createArmouringDefinition());
 
         register(createRangedCombatDefinition());
-        register(createFishingDefinition()); // XP hook later
+        register(createFishingDefinition());
+        register(createMeleeCombatDefinition());
     }
 
     private static void register(KnowledgeDefinition def) {
@@ -239,11 +243,8 @@ public class KnowledgeRegistry {
         Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
 
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
-        // T0 -> T1: bow
         xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.BOW));
-        // T1 -> T2: bow or crossbow
         xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.BOW, KnowledgeDefinition.ToolTier.CROSSBOW));
-        // T2+ : crossbow (you can tweak)
         xpToolTiers.put(2, EnumSet.of(KnowledgeDefinition.ToolTier.CROSSBOW));
         xpToolTiers.put(3, EnumSet.of(KnowledgeDefinition.ToolTier.CROSSBOW));
         xpToolTiers.put(4, EnumSet.of(KnowledgeDefinition.ToolTier.CROSSBOW));
@@ -256,7 +257,7 @@ public class KnowledgeRegistry {
     }
 
     // --------------------------------------------------
-    //  Fishing (stubbed for now, XP hook later)
+    //  Fishing
     // --------------------------------------------------
 
     private static KnowledgeDefinition createFishingDefinition() {
@@ -274,6 +275,24 @@ public class KnowledgeRegistry {
         xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.FISHING_ROD));
         xpToolTiers.put(2, EnumSet.of(KnowledgeDefinition.ToolTier.FISHING_ROD));
 
+        List<KnowledgeDefinition.XpAction> xpActions = List.of();
+
+        return new KnowledgeDefinition(
+                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+        );
+    }
+
+    // --------------------------------------------------
+    //  Melee Combat
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createMeleeCombatDefinition() {
+        Identifier id = MELEE_COMBAT_ID;
+        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
+        int maxTier = 5;
+
+        Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
+        Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = defaultMaterialTierProgression();
         List<KnowledgeDefinition.XpAction> xpActions = List.of();
 
         return new KnowledgeDefinition(
