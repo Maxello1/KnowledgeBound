@@ -1,11 +1,23 @@
 package net.maxello.knowledgebound;
 
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.Entity;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.registry.tag.DamageTypeTags;
+import net.minecraft.server.network.ServerPlayerEntity;
+
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -14,8 +26,8 @@ import net.minecraft.world.World;
 import java.util.Random;
 
 /**
- * Handles block-break XP for material knowledges and the crafting hook
- * used by the CraftingResultSlot mixin.
+ * Handles block-break XP/failure for material knowledges,
+ * ranged combat XP, and the crafting hook used by the mixin.
  */
 public class KnowledgeEvents {
 
@@ -24,6 +36,7 @@ public class KnowledgeEvents {
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering events…");
         registerBlockBreakXpAndFailure();
+        registerRangedCombatXp();
     }
 
     // ----------------------------------------------------------------------
@@ -37,7 +50,6 @@ public class KnowledgeEvents {
             Block block = state.getBlock();
             Identifier blockId = Registries.BLOCK.getId(block);
 
-            // We handle at most one knowledge per block type.
             if (isForestryBlock(blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FORESTRY_ID);
                 if (def != null) {
@@ -65,38 +77,30 @@ public class KnowledgeEvents {
         });
     }
 
-    /**
-     * Apply knowledge failure + XP for a single gatherable block.
-     *
-     * @return true  → allow vanilla to break & drop items
-     *         false → we've already broken the block (no drops), cancel vanilla
-     */
     private static boolean handleGatherBlock(World world,
                                              ServerPlayerEntity player,
                                              BlockPos pos,
                                              BlockState state,
                                              KnowledgeDefinition def) {
 
-        // Determine current tier & failure chance
         int tier = PlayerKnowledgeManager.getTier(player, def.getId());
         double failChance = getGatherFailChance(def, tier);
         boolean fail = RANDOM.nextDouble() < failChance;
 
         if (fail) {
-            // "Scuffed" gather: block breaks, but no drops and no XP.
+            // Scuffed gather: block breaks, but no drops and no XP.
             if (!world.isClient()) {
                 world.breakBlock(pos, false, player); // false -> no item drops
 
-                // Red message: "Your Forestry attempt failed to yield any resources."
                 player.sendMessage(
                         KnowledgeBoundTextFormatter.gatheringFail(def.getId()),
                         true
                 );
             }
-            return false; // cancel vanilla breaking, we already did it
+            return false; // cancel vanilla breaking, we already handled it
         }
 
-        // Success: let vanilla handle breaking + drops, and grant XP.
+        // Success: let vanilla handle breaking + drops, and grant XP
         KnowledgeDefinition.ToolTier toolTier =
                 ToolTierHelper.fromItem(player.getMainHandStack());
         grantXpIfValidTool(player, def, toolTier);
@@ -104,25 +108,13 @@ public class KnowledgeEvents {
         return true;
     }
 
-
-    // -----------------------------
-    // Fail chance per tier
-    // -----------------------------
-
     /**
      * Chance that a gather action yields no drops, per tier.
      * Applies to Forestry, Mining, Digging, Farming.
-     *
-     * Tier 0: 40% fail
-     * Tier 1: 25% fail
-     * Tier 2: 10% fail
-     * Tier 3:  5% fail
-     * Tier 4+: 2% fail
      */
     private static double getGatherFailChance(KnowledgeDefinition def, int tier) {
         Identifier id = def.getId();
 
-        // Only our four gather knowledges use this mechanic.
         if (!(id.equals(KnowledgeRegistry.FORESTRY_ID)
                 || id.equals(KnowledgeRegistry.MINING_ID)
                 || id.equals(KnowledgeRegistry.DIGGING_ID)
@@ -218,6 +210,50 @@ public class KnowledgeEvents {
     }
 
     // ----------------------------------------------------------------------
+    // Ranged Combat XP (bow / crossbow hits)
+    // ----------------------------------------------------------------------
+
+    private static void registerRangedCombatXp() {
+        ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
+            // This runs BEFORE damage is applied, but after we've confirmed
+            // that something is about to take damage.
+
+            // Ignore non-positive damage
+            if (amount <= 0.0f) {
+                return true; // allow damage
+            }
+
+            // Only care about projectile damage (arrows, etc.)
+            if (!source.isIn(DamageTypeTags.IS_PROJECTILE)) {
+                return true;
+            }
+
+            Entity attacker = source.getAttacker();
+            if (!(attacker instanceof ServerPlayerEntity player)) {
+                return true;
+            }
+
+            // Ranged knowledge definition
+            KnowledgeDefinition rangedDef =
+                    KnowledgeRegistry.get(KnowledgeRegistry.RANGED_COMBAT_ID);
+            if (rangedDef == null) {
+                return true;
+            }
+
+            // What is the player holding? (bow / crossbow)
+            KnowledgeDefinition.ToolTier toolTier =
+                    ToolTierHelper.fromItem(player.getMainHandStack());
+
+            // Will only grant XP if that tier is valid for the current knowledge tier
+            grantXpIfValidTool(player, rangedDef, toolTier);
+
+            // We don't want to block damage, just observe it.
+            return true;
+        });
+    }
+
+
+    // ----------------------------------------------------------------------
     // XP helper
     // ----------------------------------------------------------------------
 
@@ -307,15 +343,16 @@ public class KnowledgeEvents {
                 return KnowledgeDefinition.ToolTier.FIST;
             }
             String path = stack.getItem().toString();
-            if (path.contains("wooden_")) return KnowledgeDefinition.ToolTier.WOOD;
-            if (path.contains("stone_")) return KnowledgeDefinition.ToolTier.STONE;
-            if (path.contains("copper_")) return KnowledgeDefinition.ToolTier.COPPER;
-            if (path.contains("iron_")) return KnowledgeDefinition.ToolTier.IRON;
+            if (path.contains("wooden_"))  return KnowledgeDefinition.ToolTier.WOOD;
+            if (path.contains("stone_"))   return KnowledgeDefinition.ToolTier.STONE;
+            if (path.contains("copper_"))  return KnowledgeDefinition.ToolTier.COPPER;
+            if (path.contains("iron_"))    return KnowledgeDefinition.ToolTier.IRON;
             if (path.contains("diamond_")) return KnowledgeDefinition.ToolTier.DIAMOND;
-            if (path.contains("leather_")) return KnowledgeDefinition.ToolTier.LEATHER;
+            if (path.contains("leather_"))   return KnowledgeDefinition.ToolTier.LEATHER;
             if (path.contains("chainmail_")) return KnowledgeDefinition.ToolTier.CHAINMAIL;
-            if (path.contains("bow")) return KnowledgeDefinition.ToolTier.BOW;
-            if (path.contains("crossbow")) return KnowledgeDefinition.ToolTier.CROSSBOW;
+            if (path.contains("bow"))        return KnowledgeDefinition.ToolTier.BOW;
+            if (path.contains("crossbow"))   return KnowledgeDefinition.ToolTier.CROSSBOW;
+            if (path.contains("fishing_rod")) return KnowledgeDefinition.ToolTier.FISHING_ROD;
 
             return KnowledgeDefinition.ToolTier.UNKNOWN;
         }

@@ -27,6 +27,7 @@ public class KnowledgeDefinition {
         CHAINMAIL,
         BOW,
         CROSSBOW,
+        FISHING_ROD,
         UNKNOWN
     }
 

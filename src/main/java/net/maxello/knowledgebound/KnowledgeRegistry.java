@@ -8,7 +8,7 @@ public class KnowledgeRegistry {
 
     private static final Map<Identifier, KnowledgeDefinition> REGISTRY = new HashMap<>();
 
-    // Public IDs for material knowledges
+    // Public IDs for material/profession knowledges
     public static final Identifier FORESTRY_ID =
             new Identifier(KnowledgeBound.MOD_ID, "forestry");
     public static final Identifier MINING_ID =
@@ -25,6 +25,11 @@ public class KnowledgeRegistry {
     public static final Identifier ARMOURING_ID =
             new Identifier(KnowledgeBound.MOD_ID, "armouring");
 
+    public static final Identifier RANGED_COMBAT_ID =
+            new Identifier(KnowledgeBound.MOD_ID, "ranged_combat");
+    public static final Identifier FISHING_ID =
+            new Identifier(KnowledgeBound.MOD_ID, "fishing");
+
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering knowledges…");
 
@@ -36,6 +41,9 @@ public class KnowledgeRegistry {
         register(createToolsmithingDefinition());
         register(createWeaponsmithingDefinition());
         register(createArmouringDefinition());
+
+        register(createRangedCombatDefinition());
+        register(createFishingDefinition()); // XP hook later
     }
 
     private static void register(KnowledgeDefinition def) {
@@ -68,7 +76,6 @@ public class KnowledgeRegistry {
 
         return minutesPerTier;
     }
-
 
     private static Map<Integer, Set<KnowledgeDefinition.ToolTier>> defaultMaterialTierProgression() {
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
@@ -117,7 +124,7 @@ public class KnowledgeRegistry {
     }
 
     // --------------------------------------------------
-    //  Digging (shovel blocks)
+    //  Digging
     // --------------------------------------------------
 
     private static KnowledgeDefinition createDiggingDefinition() {
@@ -207,12 +214,65 @@ public class KnowledgeRegistry {
         Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
 
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
-        // Basic armor material progression
         xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.LEATHER));
         xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.CHAINMAIL));
         xpToolTiers.put(2, EnumSet.of(KnowledgeDefinition.ToolTier.COPPER));
         xpToolTiers.put(3, EnumSet.of(KnowledgeDefinition.ToolTier.IRON));
         xpToolTiers.put(4, EnumSet.of(KnowledgeDefinition.ToolTier.DIAMOND));
+
+        List<KnowledgeDefinition.XpAction> xpActions = List.of();
+
+        return new KnowledgeDefinition(
+                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+        );
+    }
+
+    // --------------------------------------------------
+    //  Ranged Combat
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createRangedCombatDefinition() {
+        Identifier id = RANGED_COMBAT_ID;
+        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
+        int maxTier = 5;
+
+        Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
+
+        Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
+        // T0 -> T1: bow
+        xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.BOW));
+        // T1 -> T2: bow or crossbow
+        xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.BOW, KnowledgeDefinition.ToolTier.CROSSBOW));
+        // T2+ : crossbow (you can tweak)
+        xpToolTiers.put(2, EnumSet.of(KnowledgeDefinition.ToolTier.CROSSBOW));
+        xpToolTiers.put(3, EnumSet.of(KnowledgeDefinition.ToolTier.CROSSBOW));
+        xpToolTiers.put(4, EnumSet.of(KnowledgeDefinition.ToolTier.CROSSBOW));
+
+        List<KnowledgeDefinition.XpAction> xpActions = List.of();
+
+        return new KnowledgeDefinition(
+                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+        );
+    }
+
+    // --------------------------------------------------
+    //  Fishing (stubbed for now, XP hook later)
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createFishingDefinition() {
+        Identifier id = FISHING_ID;
+        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.PROFESSION;
+        int maxTier = 3;
+
+        Map<Integer, Integer> minutesPerTier = new HashMap<>();
+        minutesPerTier.put(1, (int) Math.round(60 * KnowledgeBoundConfig.INSTANCE.minutesMultiplier));
+        minutesPerTier.put(2, (int) Math.round(120 * KnowledgeBoundConfig.INSTANCE.minutesMultiplier));
+        minutesPerTier.put(3, (int) Math.round(240 * KnowledgeBoundConfig.INSTANCE.minutesMultiplier));
+
+        Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
+        xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.FISHING_ROD));
+        xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.FISHING_ROD));
+        xpToolTiers.put(2, EnumSet.of(KnowledgeDefinition.ToolTier.FISHING_ROD));
 
         List<KnowledgeDefinition.XpAction> xpActions = List.of();
 
