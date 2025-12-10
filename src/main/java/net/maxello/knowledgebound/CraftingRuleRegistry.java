@@ -12,10 +12,14 @@ public class CraftingRuleRegistry {
 
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering crafting knowledge rules…");
-        registerWoodenToolRules();
+        registerToolRules();
         registerArmorRules();
+        registerWeaponRules();
     }
 
+    /**
+     * Returns the rule for the given crafted item ID, or null if none registered.
+     */
     public static CraftingKnowledgeRule getForItem(Identifier itemId) {
         return RULES_BY_ITEM.get(itemId);
     }
@@ -28,21 +32,32 @@ public class CraftingRuleRegistry {
     }
 
     // --------------------------------------------------
-    //  Toolsmithing: wooden tools (you can extend later)
+    //  Toolsmithing: tools (currently wooden, stone, iron, diamond, netherite)
+    //  Chances per knowledge tier come from config.toolsmithingChances
     // --------------------------------------------------
 
-    private static void registerWoodenToolRules() {
+    private static void registerToolRules() {
         Map<Integer, CraftingKnowledgeRule.TierChance> tierChances = new HashMap<>();
 
-        // Example chances – tweak to taste.
-        tierChances.put(0, new CraftingKnowledgeRule.TierChance(0.20, 0.40)); // 20% good, 40% poor, 40% fail
-        tierChances.put(1, new CraftingKnowledgeRule.TierChance(0.40, 0.40)); // 40% good, 40% poor, 20% fail
-        tierChances.put(2, new CraftingKnowledgeRule.TierChance(0.60, 0.30)); // 60% good, 30% poor, 10% fail
-        tierChances.put(3, new CraftingKnowledgeRule.TierChance(0.80, 0.15)); // 80% good, 15% poor, 5% fail
-        tierChances.put(4, new CraftingKnowledgeRule.TierChance(0.90, 0.09)); // 90% good, 9% poor, 1% fail
+        // Fill per-knowledge-tier chances (0..4) from config
+        KnowledgeBoundConfig.CraftingTierChances[] cfgArr =
+                KnowledgeBoundConfig.INSTANCE.toolsmithingChances;
+
+        for (int tier = 0; tier <= 4; tier++) {
+            int idx = clamp(tier, 0, cfgArr.length - 1);
+            KnowledgeBoundConfig.CraftingTierChances c = cfgArr[idx];
+            c.normalize();
+
+            // In your TierChance, first param = goodChance, second = poorChance.
+            // FailChance is implicit: 1 - (good + poor).
+            double good = c.normalChance;
+            double poor = c.poorChance;
+
+            tierChances.put(tier, new CraftingKnowledgeRule.TierChance(good, poor));
+        }
 
         CraftingKnowledgeRule rule = new CraftingKnowledgeRule(
-                new Identifier(KnowledgeBound.MOD_ID, "wooden_tool_crafting"),
+                new Identifier(KnowledgeBound.MOD_ID, "tool_crafting"),
                 KnowledgeRegistry.TOOLSMITHING_ID,
                 0.10,          // poor tools have 10% of max durability
                 tierChances
@@ -58,7 +73,47 @@ public class CraftingRuleRegistry {
                 new Identifier("minecraft", "wooden_hoe")
         );
 
-        // Extra tool items from config (e.g. modded wooden tools)
+        // Vanilla stone tools
+        register(
+                rule,
+                new Identifier("minecraft", "stone_sword"),
+                new Identifier("minecraft", "stone_axe"),
+                new Identifier("minecraft", "stone_pickaxe"),
+                new Identifier("minecraft", "stone_shovel"),
+                new Identifier("minecraft", "stone_hoe")
+        );
+
+        // Vanilla iron tools
+        register(
+                rule,
+                new Identifier("minecraft", "iron_sword"),
+                new Identifier("minecraft", "iron_axe"),
+                new Identifier("minecraft", "iron_pickaxe"),
+                new Identifier("minecraft", "iron_shovel"),
+                new Identifier("minecraft", "iron_hoe")
+        );
+
+        // Vanilla diamond tools
+        register(
+                rule,
+                new Identifier("minecraft", "diamond_sword"),
+                new Identifier("minecraft", "diamond_axe"),
+                new Identifier("minecraft", "diamond_pickaxe"),
+                new Identifier("minecraft", "diamond_shovel"),
+                new Identifier("minecraft", "diamond_hoe")
+        );
+
+        // Vanilla netherite tools
+        register(
+                rule,
+                new Identifier("minecraft", "netherite_sword"),
+                new Identifier("minecraft", "netherite_axe"),
+                new Identifier("minecraft", "netherite_pickaxe"),
+                new Identifier("minecraft", "netherite_shovel"),
+                new Identifier("minecraft", "netherite_hoe")
+        );
+
+        // Extra tool items from config (e.g. modded tools)
         for (String idStr : KnowledgeBoundConfig.INSTANCE.extraToolItems) {
             try {
                 Identifier id = new Identifier(idStr);
@@ -71,17 +126,25 @@ public class CraftingRuleRegistry {
 
     // --------------------------------------------------
     //  Armouring: all vanilla armor pieces
+    //  Chances per knowledge tier come from config.armouringChances
     // --------------------------------------------------
 
     private static void registerArmorRules() {
         Map<Integer, CraftingKnowledgeRule.TierChance> tierChances = new HashMap<>();
 
-        // Same shape as tools for now – can be tuned separately if you want.
-        tierChances.put(0, new CraftingKnowledgeRule.TierChance(0.20, 0.40));
-        tierChances.put(1, new CraftingKnowledgeRule.TierChance(0.40, 0.40));
-        tierChances.put(2, new CraftingKnowledgeRule.TierChance(0.60, 0.30));
-        tierChances.put(3, new CraftingKnowledgeRule.TierChance(0.80, 0.15));
-        tierChances.put(4, new CraftingKnowledgeRule.TierChance(0.90, 0.09));
+        KnowledgeBoundConfig.CraftingTierChances[] cfgArr =
+                KnowledgeBoundConfig.INSTANCE.armouringChances;
+
+        for (int tier = 0; tier <= 4; tier++) {
+            int idx = clamp(tier, 0, cfgArr.length - 1);
+            KnowledgeBoundConfig.CraftingTierChances c = cfgArr[idx];
+            c.normalize();
+
+            double good = c.normalChance;
+            double poor = c.poorChance;
+
+            tierChances.put(tier, new CraftingKnowledgeRule.TierChance(good, poor));
+        }
 
         CraftingKnowledgeRule rule = new CraftingKnowledgeRule(
                 new Identifier(KnowledgeBound.MOD_ID, "armor_crafting"),
@@ -142,5 +205,66 @@ public class CraftingRuleRegistry {
                 KnowledgeBound.LOGGER.warn("[KnowledgeBound] Invalid extraArmorItems id in config: {}", idStr);
             }
         }
+    }
+
+    // --------------------------------------------------
+    //  Weaponsmithing: swords only (for now)
+    //  Chances per knowledge tier come from config.weaponsmithingChances
+    // --------------------------------------------------
+
+    private static void registerWeaponRules() {
+        Map<Integer, CraftingKnowledgeRule.TierChance> tierChances = new HashMap<>();
+
+        KnowledgeBoundConfig.CraftingTierChances[] cfgArr =
+                KnowledgeBoundConfig.INSTANCE.weaponsmithingChances;
+
+        for (int tier = 0; tier <= 4; tier++) {
+            int idx = clamp(tier, 0, cfgArr.length - 1);
+            KnowledgeBoundConfig.CraftingTierChances c = cfgArr[idx];
+            c.normalize();
+
+            double good = c.normalChance;
+            double poor = c.poorChance;
+
+            tierChances.put(tier, new CraftingKnowledgeRule.TierChance(good, poor));
+        }
+
+        CraftingKnowledgeRule rule = new CraftingKnowledgeRule(
+                new Identifier(KnowledgeBound.MOD_ID, "weapon_crafting"),
+                KnowledgeRegistry.WEAPONSMITHING_ID,
+                0.10,          // poor weapons have 10% of max durability
+                tierChances
+        );
+
+        // Vanilla swords
+        register(
+                rule,
+                new Identifier("minecraft", "wooden_sword"),
+                new Identifier("minecraft", "stone_sword"),
+                new Identifier("minecraft", "iron_sword"),
+                new Identifier("minecraft", "golden_sword"),
+                new Identifier("minecraft", "diamond_sword"),
+                new Identifier("minecraft", "netherite_sword")
+        );
+
+        // Extra weapons from config (e.g. modded swords)
+        for (String idStr : KnowledgeBoundConfig.INSTANCE.extraWeaponItems) {
+            try {
+                Identifier id = new Identifier(idStr);
+                RULES_BY_ITEM.put(id, rule);
+            } catch (Exception e) {
+                KnowledgeBound.LOGGER.warn("[KnowledgeBound] Invalid extraWeaponItems id in config: {}", idStr);
+            }
+        }
+    }
+
+    // --------------------------------------------------
+    //  Helpers
+    // --------------------------------------------------
+
+    private static int clamp(int value, int min, int max) {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
     }
 }

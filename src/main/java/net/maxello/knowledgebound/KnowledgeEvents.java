@@ -108,24 +108,28 @@ public class KnowledgeEvents {
      * Applies to Forestry, Mining, Digging, Farming.
      */
     private static double getGatherFailChance(KnowledgeDefinition def, int tier) {
+        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
         Identifier id = def.getId();
 
-        if (!(id.equals(KnowledgeRegistry.FORESTRY_ID)
-                || id.equals(KnowledgeRegistry.MINING_ID)
-                || id.equals(KnowledgeRegistry.DIGGING_ID)
-                || id.equals(KnowledgeRegistry.FARMING_ID))) {
+        KnowledgeBoundConfig.GatherFailConfig gCfg = null;
+
+        if (id.equals(KnowledgeRegistry.FORESTRY_ID)) {
+            gCfg = cfg.forestryGatherFail;
+        } else if (id.equals(KnowledgeRegistry.MINING_ID)) {
+            gCfg = cfg.miningGatherFail;
+        } else if (id.equals(KnowledgeRegistry.DIGGING_ID)) {
+            gCfg = cfg.diggingGatherFail;
+        } else if (id.equals(KnowledgeRegistry.FARMING_ID)) {
+            gCfg = cfg.farmingGatherFail;
+        }
+
+        if (gCfg == null) {
             return 0.0;
         }
 
-        int clamped = Math.max(0, Math.min(tier, 4));
-        return switch (clamped) {
-            case 0 -> 0.40;
-            case 1 -> 0.25;
-            case 2 -> 0.10;
-            case 3 -> 0.05;
-            default -> 0.02;
-        };
+        return gCfg.getForTier(tier);
     }
+
 
     // -----------------------------
     // Block type checks

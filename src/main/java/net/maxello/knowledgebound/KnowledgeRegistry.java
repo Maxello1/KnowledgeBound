@@ -69,8 +69,9 @@ public class KnowledgeRegistry {
     private static Map<Integer, Integer> defaultMinutesPerTier() {
         Map<Integer, Integer> minutesPerTier = new HashMap<>();
 
-        double m = KnowledgeBoundConfig.INSTANCE.minutesMultiplier;
-        int[] base = {60, 120, 240, 480, 960}; // tiers 1–5
+        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
+        double m = cfg.minutesMultiplier;
+        int[] base = cfg.baseMinutesPerTier;
 
         for (int i = 0; i < base.length; i++) {
             int tier = i + 1;
@@ -80,6 +81,7 @@ public class KnowledgeRegistry {
 
         return minutesPerTier;
     }
+
 
     private static Map<Integer, Set<KnowledgeDefinition.ToolTier>> defaultMaterialTierProgression() {
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
