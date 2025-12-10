@@ -3,7 +3,10 @@
 	"package": "net.maxello.knowledgebound.mixin",
 	"compatibilityLevel": "JAVA_17",
 	"mixins": [
-		"CraftingResultSlotMixin","CraftingScreenHandlerMixin", "ServerPlayerEntityMixin"
+		"CraftingResultSlotMixin",
+        "CraftingScreenHandlerMixin",
+        "ServerPlayerEntityMixin",
+        "FishingRodHookedCriterionMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
