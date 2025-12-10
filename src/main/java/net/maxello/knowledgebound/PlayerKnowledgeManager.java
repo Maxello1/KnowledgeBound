@@ -4,7 +4,6 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.HashMap;
@@ -47,6 +46,7 @@ public class PlayerKnowledgeManager {
     /**
      * Grants 1 "minute" of XP if at least one real-time minute has passed
      * since the last gain for this knowledge.
+     * Also updates the XP bar to show this knowledge's progress.
      */
     public static void grantMinuteIfAllowed(ServerPlayerEntity player, Identifier knowledgeId) {
         KnowledgeDefinition def = KnowledgeRegistry.get(knowledgeId);
@@ -55,36 +55,41 @@ public class PlayerKnowledgeManager {
         PlayerKnowledgeState state = getState(player, knowledgeId);
         long currentMinute = player.getWorld().getTime() / (20L * 60L);
 
+        boolean gainedMinute = false;
+
         // Only one XP tick per real-time minute per knowledge
-        if (currentMinute <= state.lastXpMinuteIndex) {
-            return;
-        }
+        if (currentMinute > state.lastXpMinuteIndex) {
+            state.lastXpMinuteIndex = currentMinute;
+            state.currentMinutes += 1;
+            gainedMinute = true;
 
-        state.lastXpMinuteIndex = currentMinute;
-        state.currentMinutes += 1;
+            int nextTier = state.tier + 1;
+            int neededForNext = (nextTier <= def.getMaxTier())
+                    ? def.getMinutesForTier(nextTier)
+                    : 0;
 
-        int nextTier = state.tier + 1;
-        int neededForNext = (nextTier <= def.getMaxTier())
-                ? def.getMinutesForTier(nextTier)
-                : 0;
+            if (neededForNext > 0) {
+                boolean isSmithingKnowledge =
+                        knowledgeId.equals(KnowledgeRegistry.TOOLSMITHING_ID) ||
+                                knowledgeId.equals(KnowledgeRegistry.WEAPONSMITHING_ID) ||
+                                knowledgeId.equals(KnowledgeRegistry.ARMOURING_ID);
 
-        if (neededForNext > 0) {
-            // Don't spam smithing knowledges so we don't overwrite crafting messages
-            boolean isSmithingKnowledge =
-                    knowledgeId.equals(KnowledgeRegistry.TOOLSMITHING_ID) ||
-                            knowledgeId.equals(KnowledgeRegistry.WEAPONSMITHING_ID) ||
-                            knowledgeId.equals(KnowledgeRegistry.ARMOURING_ID);
-
-            if (!isSmithingKnowledge) {
-                player.sendMessage(
-                        KnowledgeBoundTextFormatter.learningTick(knowledgeId),
-                        true // action bar
-                );
+                if (!isSmithingKnowledge) {
+                    player.sendMessage(
+                            KnowledgeBoundTextFormatter.learningTick(knowledgeId),
+                            true // action bar
+                    );
+                }
             }
+
+            // Only try to level up if we actually gained XP
+            tryLevelUp(player, knowledgeId, def, state);
         }
 
-        tryLevelUp(player, knowledgeId, def, state);
+        // ❗ ALWAYS: XP bar should reflect this knowledge's current state
+        updateXpBarForKnowledge(player, knowledgeId, def, state);
     }
+
 
     private static void tryLevelUp(ServerPlayerEntity player,
                                    Identifier knowledgeId,
@@ -110,18 +115,46 @@ public class PlayerKnowledgeManager {
         }
     }
 
+    /**
+     * Sets the vanilla XP bar to represent this knowledge's tier + progress.
+     * Level number = current tier, bar progress = minutes / minutes needed.
+     */
+    private static void updateXpBarForKnowledge(ServerPlayerEntity player,
+                                                Identifier knowledgeId,
+                                                KnowledgeDefinition def,
+                                                PlayerKnowledgeState state) {
+        // XP level number = current tier
+        int levelDisplay = state.tier;
+
+        int nextTier = state.tier + 1;
+        int needed = def.getMinutesForTier(nextTier);
+        float progress;
+
+        if (nextTier > def.getMaxTier() || needed <= 0) {
+            // Max tier: full bar
+            progress = 1.0f;
+        } else {
+            progress = (float) state.currentMinutes / (float) needed;
+        }
+
+        // Directly manipulate vanilla XP fields
+        player.experienceLevel = levelDisplay;
+        player.experienceProgress = progress;
+        player.totalExperience = 0; // we don't use vanilla XP totals
+
+        // Force vanilla to sync the XP bar to the client
+        player.addExperience(0);
+    }
+
+
     public static int getTier(ServerPlayerEntity player, Identifier knowledgeId) {
         return getState(player, knowledgeId).tier;
     }
 
     // ---------------------------------------------------------------------
-    // Persistence: write/read to/from player NBT
+    // Persistence: write/read to/from player NBT (unchanged from your old file)
     // ---------------------------------------------------------------------
 
-    /**
-     * Called from a mixin on ServerPlayerEntity.writeCustomDataToNbt.
-     * Saves this player's knowledge map into the given NBT.
-     */
     public static void writeToNbt(ServerPlayerEntity player, NbtCompound root) {
         Map<Identifier, PlayerKnowledgeState> map = PLAYER_DATA.get(player.getUuid());
         if (map == null || map.isEmpty()) {
@@ -146,10 +179,6 @@ public class PlayerKnowledgeManager {
         root.put(NBT_KEY, list);
     }
 
-    /**
-     * Called from a mixin on ServerPlayerEntity.readCustomDataFromNbt.
-     * Restores this player's knowledge map from the given NBT.
-     */
     public static void readFromNbt(ServerPlayerEntity player, NbtCompound root) {
         if (!root.contains(NBT_KEY, NbtElement.LIST_TYPE)) {
             return;

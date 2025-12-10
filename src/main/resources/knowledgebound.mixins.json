@@ -6,7 +6,11 @@
 		"CraftingResultSlotMixin",
         "CraftingScreenHandlerMixin",
         "ServerPlayerEntityMixin",
-        "FishingRodHookedCriterionMixin"
+        "FishingRodHookedCriterionMixin",
+        "AnvilScreenHandlerMixin",
+        "EnchantmentScreenHandlerMixin",
+        "ExperienceOrbEntityMixin",
+        "PlayerEntityMixin",
 	],
 	"injectors": {
 		"defaultRequire": 1
