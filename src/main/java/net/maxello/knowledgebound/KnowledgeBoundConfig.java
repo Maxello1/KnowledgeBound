@@ -10,16 +10,40 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class KnowledgeBoundConfig {
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    // Pretty JSON, but without HTML escaping so we don't get \u003d etc.
+    private static final Gson GSON = new GsonBuilder()
+            .setPrettyPrinting()
+            .disableHtmlEscaping()
+            .create();
+
     public static KnowledgeBoundConfig INSTANCE = new KnowledgeBoundConfig();
+
+    // --------------------------------------------------
+    // Top-level help text
+    // --------------------------------------------------
+
+    public List<String> _comment_header = List.of(
+            "KnowledgeBound config file.",
+            "You can change XP speed, fail chances, crafting quality and armor requirements here.",
+            "All values are safe to edit. If you break something, delete this file and it will regenerate."
+    );
 
     // --------------------------------------------------
     // Global XP tuning
     // --------------------------------------------------
+
+    public List<String> _comment_xp = List.of(
+            "XP progression settings:",
+            "- baseMinutesPerTier: real-time minutes needed for each tier BEFORE applying minutesMultiplier.",
+            "  Index 0 = Tier 1, index 1 = Tier 2, etc.",
+            "- minutesMultiplier: scales all minutes. Example: 2.0 = twice as slow, 0.5 = twice as fast."
+    );
 
     /**
      * Base minutes required per tier (before the multiplier).
@@ -37,6 +61,15 @@ public class KnowledgeBoundConfig {
     // --------------------------------------------------
     // Gather failure chances (Forestry, Mining, Digging, Farming)
     // --------------------------------------------------
+
+    public List<String> _comment_gatherFail = List.of(
+            "Gather fail chances:",
+            "If a gather attempt fails, the block still breaks but drops NOTHING.",
+            "Values are between 0.0 and 1.0 (0% to 100%).",
+            "Each knowledge has a set of chances per tier:",
+            "  tier0 = before you know anything",
+            "  tier1, tier2, tier3, tier4 = higher knowledge tiers."
+    );
 
     /**
      * Chance per tier that a gather action (block break) yields no drops.
@@ -83,9 +116,19 @@ public class KnowledgeBoundConfig {
     // Crafting chances (Tool / Weapon / Armour smithing)
     // --------------------------------------------------
 
+    public List<String> _comment_crafting = List.of(
+            "Crafting result chances for Toolsmithing, Weaponsmithing and Armouring.",
+            "Each array entry represents a KNOWLEDGE TIER (0..4).",
+            "Inside each entry:",
+            "  failChance   = chance to get NO item",
+            "  poorChance   = chance to get a POOR quality item (10% durability)",
+            "  normalChance = chance to get a NORMAL item (full durability)",
+            "The values are automatically normalized if they don't sum to 1.0."
+    );
+
     /**
      * Per-tier crafting chances for toolsmithing.
-     * Index 0 = wooden/copper-equivalent tier, up to index 4.
+     * Index 0..4 = knowledge tiers 0..4 (how good the smith is).
      */
     public CraftingTierChances[] toolsmithingChances = defaultToolsmithing();
 
@@ -119,7 +162,7 @@ public class KnowledgeBoundConfig {
 
         /**
          * Normalize so fail+poor+normal == 1.0.
-         * Call this before using the chances if you want to be safe vs. config edits.
+         * Called before using the chances, so you don't have to be perfect.
          */
         public void normalize() {
             double sum = failChance + poorChance + normalChance;
@@ -136,26 +179,23 @@ public class KnowledgeBoundConfig {
     }
 
     private static CraftingTierChances[] defaultToolsmithing() {
+        // Reasonable default curve; tweak in config if you want.
         return new CraftingTierChances[] {
-                // tier 0
-                new CraftingTierChances(0.50, 0.50, 0.00),
-                // tier 1
-                new CraftingTierChances(0.30, 0.50, 0.20),
-                // tier 2
-                new CraftingTierChances(0.20, 0.50, 0.30),
-                // tier 3
-                new CraftingTierChances(0.10, 0.40, 0.50),
-                // tier 4
-                new CraftingTierChances(0.05, 0.25, 0.70)
+                new CraftingTierChances(0.50, 0.50, 0.00), // knowledge tier 0
+                new CraftingTierChances(0.30, 0.50, 0.20), // tier 1
+                new CraftingTierChances(0.20, 0.50, 0.30), // tier 2
+                new CraftingTierChances(0.10, 0.40, 0.50), // tier 3
+                new CraftingTierChances(0.05, 0.25, 0.70)  // tier 4
         };
     }
 
     private static CraftingTierChances[] defaultWeaponsmithing() {
-        // Can differentiate later; for now copy toolsmithing defaults
+        // Copy of toolsmithing for now; can be adjusted separately later.
         return defaultToolsmithing();
     }
 
     private static CraftingTierChances[] defaultArmouring() {
+        // Slightly harsher at low tiers.
         return new CraftingTierChances[] {
                 new CraftingTierChances(0.60, 0.40, 0.00),
                 new CraftingTierChances(0.40, 0.40, 0.20),
@@ -164,23 +204,35 @@ public class KnowledgeBoundConfig {
                 new CraftingTierChances(0.05, 0.25, 0.70)
         };
     }
+
     // --------------------------------------------------
     // Armor equip restrictions (tier per material / item)
     // --------------------------------------------------
 
+    public List<String> _comment_armor = List.of(
+            "Armor equip restrictions:",
+            "- Your usable armor is based on your Combat Knowledge (highest of Melee + Ranged).",
+            "- You can change which combat tier is required for each armor material.",
+            "- You can also assign specific items (including modded armor) to a required tier."
+    );
+
     public ArmorTierConfig armorTiers = new ArmorTierConfig();
 
     public static class ArmorTierConfig {
+
+        public List<String> _comment_materials = List.of(
+                "Base required combat tier per vanilla armor material.",
+                "Typical progression:",
+                "  Leather   -> tier 0",
+                "  Chainmail -> tier 1",
+                "  Iron      -> tier 2",
+                "  Gold      -> tier 3",
+                "  Diamond   -> tier 4",
+                "  Netherite -> tier 5"
+        );
+
         /**
          * Base required combat tier per vanilla armor material.
-         *
-         * Default mapping:
-         *  - leather   -> 0
-         *  - chain     -> 1
-         *  - iron      -> 2
-         *  - gold      -> 3
-         *  - diamond   -> 4
-         *  - netherite -> 5
          */
         public int leatherTier   = 0;
         public int chainTier     = 1;
@@ -189,17 +241,28 @@ public class KnowledgeBoundConfig {
         public int diamondTier   = 4;
         public int netheriteTier = 5;
 
+        public List<String> _comment_extraItems = List.of(
+                "Per-item overrides for required combat tier.",
+                "Key:  full item id, e.g. \"minecraft:turtle_helmet\" or \"modid:super_chestplate\"",
+                "Value: required combat tier (0 = leather-level, 5 = netherite-level, etc.)."
+        );
+
         /**
          * Per-item overrides for required tier.
          * Key: full item id string, e.g. "minecraft:turtle_helmet" or "modid:super_armor_chestplate"
          * Value: required combat tier (0..5 or more if you want).
          */
-        public java.util.Map<String, Integer> extraItemTiers = new java.util.HashMap<>();
+        public Map<String, Integer> extraItemTiers = new HashMap<>();
     }
 
     // --------------------------------------------------
     // Existing block / item extension lists
     // --------------------------------------------------
+
+    public List<String> _comment_blocks = List.of(
+            "Extra blocks that should count for the respective gather knowledges.",
+            "Use full block IDs like \"modid:my_ore_block\" or \"modid:my_custom_log\"."
+    );
 
     /** Extra block IDs that should count for Forestry XP (e.g. "mytreesmod:ancient_log"). */
     public List<String> extraForestryBlocks = new ArrayList<>();
@@ -207,15 +270,20 @@ public class KnowledgeBoundConfig {
     public List<String> extraDiggingBlocks  = new ArrayList<>();
     public List<String> extraFarmingBlocks  = new ArrayList<>();
 
-    /** Extra item IDs that should use the wooden-tool rule. */
+    public List<String> _comment_items = List.of(
+            "Extra items that should behave like vanilla tools/armor in crafting quality rules.",
+            "Use full item IDs like \"modid:my_wooden_sword\" or \"modid:my_iron_helmet\"."
+    );
+
+    /** Extra item IDs that should use the toolsmithing rule. */
     public List<String> extraToolItems   = new ArrayList<>();
     /** Extra item IDs that should use the armor rule. */
     public List<String> extraArmorItems  = new ArrayList<>();
-    /** Reserved for future weapon rules, but already in config. */
+    /** Extra item IDs that should use the weaponsmithing rule. */
     public List<String> extraWeaponItems = new ArrayList<>();
 
     // --------------------------------------------------
-    // Load / save (unchanged logic)
+    // Load / save
     // --------------------------------------------------
 
     public static void load() {
