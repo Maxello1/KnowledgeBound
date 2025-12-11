@@ -21,5 +21,7 @@ public class KnowledgeBound implements ModInitializer {
         PlayerKnowledgeManager.init();
         KnowledgeEvents.init();
         KnowledgeCommands.init();
+        ArmorRestrictionHandler.init();
+
     }
 }

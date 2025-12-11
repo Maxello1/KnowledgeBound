@@ -151,7 +151,7 @@ public class KnowledgeBoundConfig {
     }
 
     private static CraftingTierChances[] defaultWeaponsmithing() {
-        // You can differentiate later; for now copy toolsmithing defaults
+        // Can differentiate later; for now copy toolsmithing defaults
         return defaultToolsmithing();
     }
 
@@ -163,6 +163,38 @@ public class KnowledgeBoundConfig {
                 new CraftingTierChances(0.15, 0.35, 0.50),
                 new CraftingTierChances(0.05, 0.25, 0.70)
         };
+    }
+    // --------------------------------------------------
+    // Armor equip restrictions (tier per material / item)
+    // --------------------------------------------------
+
+    public ArmorTierConfig armorTiers = new ArmorTierConfig();
+
+    public static class ArmorTierConfig {
+        /**
+         * Base required combat tier per vanilla armor material.
+         *
+         * Default mapping:
+         *  - leather   -> 0
+         *  - chain     -> 1
+         *  - iron      -> 2
+         *  - gold      -> 3
+         *  - diamond   -> 4
+         *  - netherite -> 5
+         */
+        public int leatherTier   = 0;
+        public int chainTier     = 1;
+        public int ironTier      = 2;
+        public int goldTier      = 3;
+        public int diamondTier   = 4;
+        public int netheriteTier = 5;
+
+        /**
+         * Per-item overrides for required tier.
+         * Key: full item id string, e.g. "minecraft:turtle_helmet" or "modid:super_armor_chestplate"
+         * Value: required combat tier (0..5 or more if you want).
+         */
+        public java.util.Map<String, Integer> extraItemTiers = new java.util.HashMap<>();
     }
 
     // --------------------------------------------------
