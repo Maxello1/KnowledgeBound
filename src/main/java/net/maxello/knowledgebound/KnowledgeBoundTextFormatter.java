@@ -48,7 +48,6 @@ public final class KnowledgeBoundTextFormatter {
     // --------------------------------------------------
     //  Crafting result messages (smithing-style)
     // --------------------------------------------------
-    /** Cyan text with purple “poor”, like your screenshot. */
     /** Cyan text with purple "<quality>" word for smithing results. */
     public static Text craftingQualitySmithing(String quality) {
         MutableText base = Text.literal("You crafted a ")
@@ -63,7 +62,7 @@ public final class KnowledgeBoundTextFormatter {
         return base.append(qualityWord).append(tail);
     }
 
-    /** Red failure message, similar to the forestry screenshot. */
+    /** Red failure message */
     public static Text craftingFailSmithing() {
         return Text.literal("Your smithing attempt failed to yield any items.")
                 .formatted(Formatting.RED);

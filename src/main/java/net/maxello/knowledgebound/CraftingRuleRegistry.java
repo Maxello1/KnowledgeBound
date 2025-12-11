@@ -48,7 +48,7 @@ public class CraftingRuleRegistry {
             KnowledgeBoundConfig.CraftingTierChances c = cfgArr[idx];
             c.normalize();
 
-            // In your TierChance, first param = goodChance, second = poorChance.
+            // In TierChance, first param = goodChance, second = poorChance.
             // FailChance is implicit: 1 - (good + poor).
             double good = c.normalChance;
             double poor = c.poorChance;

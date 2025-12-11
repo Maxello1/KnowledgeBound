@@ -92,7 +92,7 @@ public class KnowledgeEvents {
                         true
                 );
             }
-            return false; // cancel vanilla breaking, we already handled it
+            return false; // cancel vanilla breaking, already handled it
         }
 
         // Success: let vanilla handle breaking + drops, and grant XP
@@ -234,7 +234,7 @@ public class KnowledgeEvents {
                 return true;
             }
 
-            // Only count sword hits for now (you said "sword" explicitly)
+            // Only count sword hits for now
             ItemStack held = player.getMainHandStack();
             if (!isSwordItem(held)) {
                 return true;

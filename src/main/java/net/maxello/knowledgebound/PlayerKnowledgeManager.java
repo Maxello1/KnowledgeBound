@@ -86,7 +86,7 @@ public class PlayerKnowledgeManager {
             tryLevelUp(player, knowledgeId, def, state);
         }
 
-        // ❗ ALWAYS: XP bar should reflect this knowledge's current state
+        // ALWAYS: XP bar should reflect this knowledge's current state
         updateXpBarForKnowledge(player, knowledgeId, def, state);
     }
 
@@ -152,7 +152,7 @@ public class PlayerKnowledgeManager {
     }
 
     // ---------------------------------------------------------------------
-    // Persistence: write/read to/from player NBT (unchanged from your old file)
+    // Persistence: write/read to/from player NBT data
     // ---------------------------------------------------------------------
 
     public static void writeToNbt(ServerPlayerEntity player, NbtCompound root) {
