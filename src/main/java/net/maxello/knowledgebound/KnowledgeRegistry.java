@@ -10,28 +10,28 @@ public class KnowledgeRegistry {
 
     // Public IDs for material/profession knowledges
     public static final Identifier FORESTRY_ID =
-            new Identifier(KnowledgeBound.MOD_ID, "forestry");
+            Identifier.of(KnowledgeBound.MOD_ID, "forestry");
     public static final Identifier MINING_ID =
-            new Identifier(KnowledgeBound.MOD_ID, "mining");
+            Identifier.of(KnowledgeBound.MOD_ID, "mining");
     public static final Identifier DIGGING_ID =
-            new Identifier(KnowledgeBound.MOD_ID, "digging");
+            Identifier.of(KnowledgeBound.MOD_ID, "digging");
     public static final Identifier FARMING_ID =
-            new Identifier(KnowledgeBound.MOD_ID, "farming");
+            Identifier.of(KnowledgeBound.MOD_ID, "farming");
 
     public static final Identifier TOOLSMITHING_ID =
-            new Identifier(KnowledgeBound.MOD_ID, "toolsmithing");
+            Identifier.of(KnowledgeBound.MOD_ID, "toolsmithing");
     public static final Identifier WEAPONSMITHING_ID =
-            new Identifier(KnowledgeBound.MOD_ID, "weaponsmithing");
+            Identifier.of(KnowledgeBound.MOD_ID, "weaponsmithing");
     public static final Identifier ARMOURING_ID =
-            new Identifier(KnowledgeBound.MOD_ID, "armouring");
+            Identifier.of(KnowledgeBound.MOD_ID, "armouring");
 
     public static final Identifier RANGED_COMBAT_ID =
-            new Identifier(KnowledgeBound.MOD_ID, "ranged_combat");
+            Identifier.of(KnowledgeBound.MOD_ID, "ranged_combat");
     public static final Identifier FISHING_ID =
-            new Identifier(KnowledgeBound.MOD_ID, "fishing");
+            Identifier.of(KnowledgeBound.MOD_ID, "fishing");
 
     public static final Identifier MELEE_COMBAT_ID =
-            new Identifier(KnowledgeBound.MOD_ID, "melee_combat");
+            Identifier.of(KnowledgeBound.MOD_ID, "melee_combat");
 
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering knowledges…");
@@ -268,9 +268,12 @@ public class KnowledgeRegistry {
         int maxTier = 3;
 
         Map<Integer, Integer> minutesPerTier = new HashMap<>();
-        minutesPerTier.put(1, (int) Math.round(60 * KnowledgeBoundConfig.INSTANCE.minutesMultiplier));
-        minutesPerTier.put(2, (int) Math.round(120 * KnowledgeBoundConfig.INSTANCE.minutesMultiplier));
-        minutesPerTier.put(3, (int) Math.round(240 * KnowledgeBoundConfig.INSTANCE.minutesMultiplier));
+        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
+        int[] fishBase = cfg.fishingBaseMinutes;
+        double m = cfg.minutesMultiplier;
+        for (int i = 0; i < fishBase.length; i++) {
+            minutesPerTier.put(i + 1, Math.max(1, (int) Math.round(fishBase[i] * m)));
+        }
 
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
         xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.FISHING_ROD));

@@ -1,20 +1,25 @@
 package net.maxello.knowledgebound;
 
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.CropBlock;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.ItemEntity;
 
 import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.world.World;
 
 import java.util.Random;
@@ -32,6 +37,24 @@ public class KnowledgeEvents {
         registerBlockBreakXpAndFailure();
         registerRangedCombatXp();
         registerMeleeCombatXp();
+        registerRespawnRestore();
+    }
+
+    // ----------------------------------------------------------------------
+    // Respawn: restore knowledge XP bar after death
+    // ----------------------------------------------------------------------
+
+    private static void registerRespawnRestore() {
+        ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
+            // Copy knowledge data from the old player to the new one
+            PlayerKnowledgeManager.copyData(oldPlayer, newPlayer);
+
+            // Delay XP bar restore by 1 tick — vanilla hasn't finished
+            // initializing the new player entity at this point
+            newPlayer.server.execute(() -> {
+                PlayerKnowledgeManager.restoreXpBar(newPlayer);
+            });
+        });
     }
 
     // ----------------------------------------------------------------------
@@ -48,22 +71,22 @@ public class KnowledgeEvents {
             if (isForestryBlock(blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FORESTRY_ID);
                 if (def != null) {
-                    return handleGatherBlock(world, serverPlayer, pos, state, def);
+                    return handleGatherBlock(world, serverPlayer, pos, state, def, false);
                 }
             } else if (isMiningBlock(blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.MINING_ID);
                 if (def != null) {
-                    return handleGatherBlock(world, serverPlayer, pos, state, def);
+                    return handleGatherBlock(world, serverPlayer, pos, state, def, false);
                 }
             } else if (isDiggingBlock(blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.DIGGING_ID);
                 if (def != null) {
-                    return handleGatherBlock(world, serverPlayer, pos, state, def);
+                    return handleGatherBlock(world, serverPlayer, pos, state, def, false);
                 }
-            } else if (isFarmingBlock(blockId)) {
+            } else if (isMatureFarmingBlock(state, blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FARMING_ID);
                 if (def != null) {
-                    return handleGatherBlock(world, serverPlayer, pos, state, def);
+                    return handleGatherBlock(world, serverPlayer, pos, state, def, true);
                 }
             }
 
@@ -76,23 +99,36 @@ public class KnowledgeEvents {
                                              ServerPlayerEntity player,
                                              BlockPos pos,
                                              BlockState state,
-                                             KnowledgeDefinition def) {
+                                             KnowledgeDefinition def,
+                                             boolean isMatureCrop) {
 
         int tier = PlayerKnowledgeManager.getTier(player, def.getId());
-        double failChance = getGatherFailChance(def, tier);
+
+        // Fully mature crops bypass the fail chance — reward patient farming
+        boolean skipFail = isMatureCrop;
+        double failChance = skipFail ? 0.0 : getGatherFailChance(def, tier);
         boolean fail = RANDOM.nextDouble() < failChance;
 
         if (fail) {
-            // Scuffed gather: block breaks, but no drops and no XP.
-            if (!world.isClient()) {
-                world.breakBlock(pos, false, player); // false -> no item drops
+            // Scuffed gather: let vanilla break the block (keeps client in sync),
+            // then remove any dropped items server-side on the next tick.
+            if (world instanceof ServerWorld serverWorld) {
+                // Schedule drop removal for next tick to avoid client-server desync
+                player.server.execute(() -> {
+                    // Remove item entities within 2 blocks of the broken block
+                    Box area = new Box(pos).expand(2.0);
+                    for (ItemEntity itemEntity : serverWorld.getEntitiesByClass(
+                            ItemEntity.class, area, e -> e.age <= 2)) {
+                        itemEntity.discard();
+                    }
+                });
 
                 player.sendMessage(
                         KnowledgeBoundTextFormatter.gatheringFail(def.getId()),
                         true
                 );
             }
-            return false; // cancel vanilla breaking, already handled it
+            return true; // let vanilla break normally (client stays in sync)
         }
 
         // Success: let vanilla handle breaking + drops, and grant XP
@@ -186,16 +222,30 @@ public class KnowledgeEvents {
         return vanilla || matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraDiggingBlocks);
     }
 
-    private static boolean isFarmingBlock(Identifier blockId) {
-        boolean vanilla =
-                blockId.equals(Registries.BLOCK.getId(Blocks.WHEAT)) ||
-                        blockId.equals(Registries.BLOCK.getId(Blocks.CARROTS)) ||
-                        blockId.equals(Registries.BLOCK.getId(Blocks.POTATOES)) ||
-                        blockId.equals(Registries.BLOCK.getId(Blocks.BEETROOTS)) ||
-                        blockId.equals(Registries.BLOCK.getId(Blocks.MELON_STEM)) ||
-                        blockId.equals(Registries.BLOCK.getId(Blocks.PUMPKIN_STEM));
+    /**
+     * Returns true only for fully grown crops.
+     * Immature crops are ignored entirely (no XP, no fail chance).
+     */
+    private static boolean isMatureFarmingBlock(BlockState state, Identifier blockId) {
+        Block block = state.getBlock();
 
-        return vanilla || matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraFarmingBlocks);
+        // Check vanilla crops — only process if at max age
+        if (block instanceof CropBlock cropBlock) {
+            if (!cropBlock.isMature(state)) {
+                return false; // not fully grown, skip entirely
+            }
+            boolean vanilla =
+                    blockId.equals(Registries.BLOCK.getId(Blocks.WHEAT)) ||
+                            blockId.equals(Registries.BLOCK.getId(Blocks.CARROTS)) ||
+                            blockId.equals(Registries.BLOCK.getId(Blocks.POTATOES)) ||
+                            blockId.equals(Registries.BLOCK.getId(Blocks.BEETROOTS)) ||
+                            blockId.equals(Registries.BLOCK.getId(Blocks.MELON_STEM)) ||
+                            blockId.equals(Registries.BLOCK.getId(Blocks.PUMPKIN_STEM));
+            return vanilla || matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraFarmingBlocks);
+        }
+
+        // Non-crop farming blocks from config (e.g. modded) — always process
+        return matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraFarmingBlocks);
     }
 
     private static boolean matchesExtraBlock(Identifier blockId, java.util.List<String> ids) {
@@ -364,8 +414,18 @@ public class KnowledgeEvents {
     }
     private static boolean isSwordItem(ItemStack stack) {
         if (stack.isEmpty()) return false;
-        String path = stack.getItem().toString();
-        return path.endsWith("_sword");
+        // Prefer the registry id path (e.g. "minecraft:iron_sword") instead of
+        // relying on Item.toString(), which may be implementation-specific.
+        try {
+            Identifier id = Registries.ITEM.getId(stack.getItem());
+            if (id != null) {
+                return id.getPath().endsWith("_sword");
+            }
+        } catch (Exception ignored) {
+            // Fall back to item.toString() if registry lookup fails for some reason.
+        }
+        String fallback = stack.getItem().toString();
+        return fallback.endsWith("_sword");
     }
 
     private static boolean isArmorItem(String path) {
@@ -385,7 +445,16 @@ public class KnowledgeEvents {
             if (stack.isEmpty()) {
                 return KnowledgeDefinition.ToolTier.FIST;
             }
-            String path = stack.getItem().toString();
+            // Use registry id path (recommended) and fall back to toString() only
+            // if lookup fails. This is more robust for modded items.
+            String path;
+            try {
+                Identifier id = Registries.ITEM.getId(stack.getItem());
+                path = (id != null) ? id.getPath() : stack.getItem().toString();
+            } catch (Exception e) {
+                path = stack.getItem().toString();
+            }
+
             if (path.contains("wooden_"))  return KnowledgeDefinition.ToolTier.WOOD;
             if (path.contains("stone_"))   return KnowledgeDefinition.ToolTier.STONE;
             if (path.contains("copper_"))  return KnowledgeDefinition.ToolTier.COPPER;
@@ -393,11 +462,11 @@ public class KnowledgeEvents {
             if (path.contains("diamond_")) return KnowledgeDefinition.ToolTier.DIAMOND;
             if (path.contains("leather_"))   return KnowledgeDefinition.ToolTier.LEATHER;
             if (path.contains("chainmail_")) return KnowledgeDefinition.ToolTier.CHAINMAIL;
-            if (path.contains("bow"))        return KnowledgeDefinition.ToolTier.BOW;
             if (path.contains("crossbow"))   return KnowledgeDefinition.ToolTier.CROSSBOW;
+            if (path.contains("bow"))        return KnowledgeDefinition.ToolTier.BOW;
             if (path.contains("fishing_rod")) return KnowledgeDefinition.ToolTier.FISHING_ROD;
 
             return KnowledgeDefinition.ToolTier.UNKNOWN;
-        }
-    }
+         }
+     }
 }

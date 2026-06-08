@@ -63,10 +63,12 @@ public class CraftingKnowledgeRule {
                            ItemStack originalStack,
                            int knowledgeTier) {
 
-        // Fallback to tier 0 chances if none are defined for this tier
+        // Look up the chances for this tier; if not found, use the highest defined tier
+        // (not tier 0!) so over-leveled players get the best available chances.
         TierChance tc = tierChances.get(knowledgeTier);
         if (tc == null) {
-            tc = tierChances.getOrDefault(0, new TierChance(1.0, 0.0));
+            int maxDefined = tierChances.keySet().stream().mapToInt(Integer::intValue).max().orElse(0);
+            tc = tierChances.getOrDefault(maxDefined, new TierChance(1.0, 0.0));
         }
 
         double roll = random.nextDouble();

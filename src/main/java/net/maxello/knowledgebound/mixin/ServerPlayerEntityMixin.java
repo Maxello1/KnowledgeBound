@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ServerPlayerEntity.class)
+@SuppressWarnings("unused") // mixin class used reflectively
 public abstract class ServerPlayerEntityMixin extends PlayerEntity {
 
     // Required dummy constructor for mixin into PlayerEntity subclass
@@ -21,12 +22,16 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
     }
 
     @Inject(method = "writeCustomDataToNbt", at = @At("TAIL"))
+    @SuppressWarnings("unused")
     private void knowledgebound$writeKnowledge(NbtCompound nbt, CallbackInfo ci) {
-        PlayerKnowledgeManager.writeToNbt((ServerPlayerEntity) (Object) this, nbt);
+        ServerPlayerEntity self = (ServerPlayerEntity) (Object) this;
+        PlayerKnowledgeManager.writeToNbt(self, nbt);
     }
 
     @Inject(method = "readCustomDataFromNbt", at = @At("TAIL"))
+    @SuppressWarnings("unused")
     private void knowledgebound$readKnowledge(NbtCompound nbt, CallbackInfo ci) {
-        PlayerKnowledgeManager.readFromNbt((ServerPlayerEntity) (Object) this, nbt);
+        ServerPlayerEntity self = (ServerPlayerEntity) (Object) this;
+        PlayerKnowledgeManager.readFromNbt(self, nbt);
     }
 }

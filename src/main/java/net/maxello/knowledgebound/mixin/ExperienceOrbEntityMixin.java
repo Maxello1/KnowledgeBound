@@ -11,7 +11,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ExperienceOrbEntityMixin {
 
     /**
-     * Prevent XP orbs from giving XP. We just discard the orb.
+     * Prevent XP orbs from giving XP. We discard the orb immediately so vanilla
+     * pickup logic doesn't award experience — KnowledgeBound tracks/awards XP
+     * through its own systems.
      */
     @Inject(method = "onPlayerCollision", at = @At("HEAD"), cancellable = true)
     private void knowledgebound$noXpPickup(PlayerEntity player, CallbackInfo ci) {

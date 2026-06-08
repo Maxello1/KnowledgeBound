@@ -43,9 +43,8 @@ public class CraftingRuleRegistry {
         KnowledgeBoundConfig.CraftingTierChances[] cfgArr =
                 KnowledgeBoundConfig.INSTANCE.toolsmithingChances;
 
-        for (int tier = 0; tier <= 4; tier++) {
-            int idx = clamp(tier, 0, cfgArr.length - 1);
-            KnowledgeBoundConfig.CraftingTierChances c = cfgArr[idx];
+        for (int tier = 0; tier < cfgArr.length; tier++) {
+            KnowledgeBoundConfig.CraftingTierChances c = cfgArr[tier];
             c.normalize();
 
             // In TierChance, first param = goodChance, second = poorChance.
@@ -57,7 +56,7 @@ public class CraftingRuleRegistry {
         }
 
         CraftingKnowledgeRule rule = new CraftingKnowledgeRule(
-                new Identifier(KnowledgeBound.MOD_ID, "tool_crafting"),
+                Identifier.of(KnowledgeBound.MOD_ID, "tool_crafting"),
                 KnowledgeRegistry.TOOLSMITHING_ID,
                 0.10,          // poor tools have 10% of max durability
                 tierChances
@@ -66,57 +65,57 @@ public class CraftingRuleRegistry {
         // Vanilla wooden tools
         register(
                 rule,
-                new Identifier("minecraft", "wooden_sword"),
-                new Identifier("minecraft", "wooden_axe"),
-                new Identifier("minecraft", "wooden_pickaxe"),
-                new Identifier("minecraft", "wooden_shovel"),
-                new Identifier("minecraft", "wooden_hoe")
+                Identifier.of("minecraft", "wooden_sword"),
+                Identifier.of("minecraft", "wooden_axe"),
+                Identifier.of("minecraft", "wooden_pickaxe"),
+                Identifier.of("minecraft", "wooden_shovel"),
+                Identifier.of("minecraft", "wooden_hoe")
         );
 
         // Vanilla stone tools
         register(
                 rule,
-                new Identifier("minecraft", "stone_sword"),
-                new Identifier("minecraft", "stone_axe"),
-                new Identifier("minecraft", "stone_pickaxe"),
-                new Identifier("minecraft", "stone_shovel"),
-                new Identifier("minecraft", "stone_hoe")
+                Identifier.of("minecraft", "stone_sword"),
+                Identifier.of("minecraft", "stone_axe"),
+                Identifier.of("minecraft", "stone_pickaxe"),
+                Identifier.of("minecraft", "stone_shovel"),
+                Identifier.of("minecraft", "stone_hoe")
         );
 
         // Vanilla iron tools
         register(
                 rule,
-                new Identifier("minecraft", "iron_sword"),
-                new Identifier("minecraft", "iron_axe"),
-                new Identifier("minecraft", "iron_pickaxe"),
-                new Identifier("minecraft", "iron_shovel"),
-                new Identifier("minecraft", "iron_hoe")
+                Identifier.of("minecraft", "iron_sword"),
+                Identifier.of("minecraft", "iron_axe"),
+                Identifier.of("minecraft", "iron_pickaxe"),
+                Identifier.of("minecraft", "iron_shovel"),
+                Identifier.of("minecraft", "iron_hoe")
         );
 
         // Vanilla diamond tools
         register(
                 rule,
-                new Identifier("minecraft", "diamond_sword"),
-                new Identifier("minecraft", "diamond_axe"),
-                new Identifier("minecraft", "diamond_pickaxe"),
-                new Identifier("minecraft", "diamond_shovel"),
-                new Identifier("minecraft", "diamond_hoe")
+                Identifier.of("minecraft", "diamond_sword"),
+                Identifier.of("minecraft", "diamond_axe"),
+                Identifier.of("minecraft", "diamond_pickaxe"),
+                Identifier.of("minecraft", "diamond_shovel"),
+                Identifier.of("minecraft", "diamond_hoe")
         );
 
         // Vanilla netherite tools
         register(
                 rule,
-                new Identifier("minecraft", "netherite_sword"),
-                new Identifier("minecraft", "netherite_axe"),
-                new Identifier("minecraft", "netherite_pickaxe"),
-                new Identifier("minecraft", "netherite_shovel"),
-                new Identifier("minecraft", "netherite_hoe")
+                Identifier.of("minecraft", "netherite_sword"),
+                Identifier.of("minecraft", "netherite_axe"),
+                Identifier.of("minecraft", "netherite_pickaxe"),
+                Identifier.of("minecraft", "netherite_shovel"),
+                Identifier.of("minecraft", "netherite_hoe")
         );
 
         // Extra tool items from config (e.g. modded tools)
         for (String idStr : KnowledgeBoundConfig.INSTANCE.extraToolItems) {
             try {
-                Identifier id = new Identifier(idStr);
+                Identifier id = Identifier.of(idStr);
                 RULES_BY_ITEM.put(id, rule);
             } catch (Exception e) {
                 KnowledgeBound.LOGGER.warn("[KnowledgeBound] Invalid extraToolItems id in config: {}", idStr);
@@ -135,9 +134,8 @@ public class CraftingRuleRegistry {
         KnowledgeBoundConfig.CraftingTierChances[] cfgArr =
                 KnowledgeBoundConfig.INSTANCE.armouringChances;
 
-        for (int tier = 0; tier <= 4; tier++) {
-            int idx = clamp(tier, 0, cfgArr.length - 1);
-            KnowledgeBoundConfig.CraftingTierChances c = cfgArr[idx];
+        for (int tier = 0; tier < cfgArr.length; tier++) {
+            KnowledgeBoundConfig.CraftingTierChances c = cfgArr[tier];
             c.normalize();
 
             double good = c.normalChance;
@@ -147,7 +145,7 @@ public class CraftingRuleRegistry {
         }
 
         CraftingKnowledgeRule rule = new CraftingKnowledgeRule(
-                new Identifier(KnowledgeBound.MOD_ID, "armor_crafting"),
+                Identifier.of(KnowledgeBound.MOD_ID, "armor_crafting"),
                 KnowledgeRegistry.ARMOURING_ID,
                 0.10,          // poor armor has 10% of max durability
                 tierChances
@@ -157,49 +155,49 @@ public class CraftingRuleRegistry {
         register(
                 rule,
                 // Leather
-                new Identifier("minecraft", "leather_helmet"),
-                new Identifier("minecraft", "leather_chestplate"),
-                new Identifier("minecraft", "leather_leggings"),
-                new Identifier("minecraft", "leather_boots"),
+                Identifier.of("minecraft", "leather_helmet"),
+                Identifier.of("minecraft", "leather_chestplate"),
+                Identifier.of("minecraft", "leather_leggings"),
+                Identifier.of("minecraft", "leather_boots"),
 
                 // Chainmail
-                new Identifier("minecraft", "chainmail_helmet"),
-                new Identifier("minecraft", "chainmail_chestplate"),
-                new Identifier("minecraft", "chainmail_leggings"),
-                new Identifier("minecraft", "chainmail_boots"),
+                Identifier.of("minecraft", "chainmail_helmet"),
+                Identifier.of("minecraft", "chainmail_chestplate"),
+                Identifier.of("minecraft", "chainmail_leggings"),
+                Identifier.of("minecraft", "chainmail_boots"),
 
                 // Iron
-                new Identifier("minecraft", "iron_helmet"),
-                new Identifier("minecraft", "iron_chestplate"),
-                new Identifier("minecraft", "iron_leggings"),
-                new Identifier("minecraft", "iron_boots"),
+                Identifier.of("minecraft", "iron_helmet"),
+                Identifier.of("minecraft", "iron_chestplate"),
+                Identifier.of("minecraft", "iron_leggings"),
+                Identifier.of("minecraft", "iron_boots"),
 
                 // Gold
-                new Identifier("minecraft", "golden_helmet"),
-                new Identifier("minecraft", "golden_chestplate"),
-                new Identifier("minecraft", "golden_leggings"),
-                new Identifier("minecraft", "golden_boots"),
+                Identifier.of("minecraft", "golden_helmet"),
+                Identifier.of("minecraft", "golden_chestplate"),
+                Identifier.of("minecraft", "golden_leggings"),
+                Identifier.of("minecraft", "golden_boots"),
 
                 // Diamond
-                new Identifier("minecraft", "diamond_helmet"),
-                new Identifier("minecraft", "diamond_chestplate"),
-                new Identifier("minecraft", "diamond_leggings"),
-                new Identifier("minecraft", "diamond_boots"),
+                Identifier.of("minecraft", "diamond_helmet"),
+                Identifier.of("minecraft", "diamond_chestplate"),
+                Identifier.of("minecraft", "diamond_leggings"),
+                Identifier.of("minecraft", "diamond_boots"),
 
                 // Netherite
-                new Identifier("minecraft", "netherite_helmet"),
-                new Identifier("minecraft", "netherite_chestplate"),
-                new Identifier("minecraft", "netherite_leggings"),
-                new Identifier("minecraft", "netherite_boots"),
+                Identifier.of("minecraft", "netherite_helmet"),
+                Identifier.of("minecraft", "netherite_chestplate"),
+                Identifier.of("minecraft", "netherite_leggings"),
+                Identifier.of("minecraft", "netherite_boots"),
 
                 // Misc
-                new Identifier("minecraft", "turtle_helmet")
+                Identifier.of("minecraft", "turtle_helmet")
         );
 
         // Extra armor items from config (e.g. modded armor)
         for (String idStr : KnowledgeBoundConfig.INSTANCE.extraArmorItems) {
             try {
-                Identifier id = new Identifier(idStr);
+                Identifier id = Identifier.of(idStr);
                 RULES_BY_ITEM.put(id, rule);
             } catch (Exception e) {
                 KnowledgeBound.LOGGER.warn("[KnowledgeBound] Invalid extraArmorItems id in config: {}", idStr);
@@ -218,9 +216,8 @@ public class CraftingRuleRegistry {
         KnowledgeBoundConfig.CraftingTierChances[] cfgArr =
                 KnowledgeBoundConfig.INSTANCE.weaponsmithingChances;
 
-        for (int tier = 0; tier <= 4; tier++) {
-            int idx = clamp(tier, 0, cfgArr.length - 1);
-            KnowledgeBoundConfig.CraftingTierChances c = cfgArr[idx];
+        for (int tier = 0; tier < cfgArr.length; tier++) {
+            KnowledgeBoundConfig.CraftingTierChances c = cfgArr[tier];
             c.normalize();
 
             double good = c.normalChance;
@@ -230,7 +227,7 @@ public class CraftingRuleRegistry {
         }
 
         CraftingKnowledgeRule rule = new CraftingKnowledgeRule(
-                new Identifier(KnowledgeBound.MOD_ID, "weapon_crafting"),
+                Identifier.of(KnowledgeBound.MOD_ID, "weapon_crafting"),
                 KnowledgeRegistry.WEAPONSMITHING_ID,
                 0.10,          // poor weapons have 10% of max durability
                 tierChances
@@ -239,18 +236,18 @@ public class CraftingRuleRegistry {
         // Vanilla swords
         register(
                 rule,
-                new Identifier("minecraft", "wooden_sword"),
-                new Identifier("minecraft", "stone_sword"),
-                new Identifier("minecraft", "iron_sword"),
-                new Identifier("minecraft", "golden_sword"),
-                new Identifier("minecraft", "diamond_sword"),
-                new Identifier("minecraft", "netherite_sword")
+                Identifier.of("minecraft", "wooden_sword"),
+                Identifier.of("minecraft", "stone_sword"),
+                Identifier.of("minecraft", "iron_sword"),
+                Identifier.of("minecraft", "golden_sword"),
+                Identifier.of("minecraft", "diamond_sword"),
+                Identifier.of("minecraft", "netherite_sword")
         );
 
         // Extra weapons from config (e.g. modded swords)
         for (String idStr : KnowledgeBoundConfig.INSTANCE.extraWeaponItems) {
             try {
-                Identifier id = new Identifier(idStr);
+                Identifier id = Identifier.of(idStr);
                 RULES_BY_ITEM.put(id, rule);
             } catch (Exception e) {
                 KnowledgeBound.LOGGER.warn("[KnowledgeBound] Invalid extraWeaponItems id in config: {}", idStr);

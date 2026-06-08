@@ -151,6 +151,53 @@ public class PlayerKnowledgeManager {
         return getState(player, knowledgeId).tier;
     }
 
+    /**
+     * Copy all knowledge data from the old player entity to the new one.
+     * Called on respawn when vanilla creates a new ServerPlayerEntity.
+     */
+    public static void copyData(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer) {
+        Map<Identifier, PlayerKnowledgeState> oldMap = PLAYER_DATA.get(oldPlayer.getUuid());
+        if (oldMap == null || oldMap.isEmpty()) return;
+
+        // Deep-copy the state so old and new don't share references
+        Map<Identifier, PlayerKnowledgeState> newMap = getOrCreatePlayerMap(newPlayer);
+        newMap.clear();
+        for (Map.Entry<Identifier, PlayerKnowledgeState> entry : oldMap.entrySet()) {
+            PlayerKnowledgeState copy = new PlayerKnowledgeState();
+            copy.tier = entry.getValue().tier;
+            copy.currentMinutes = entry.getValue().currentMinutes;
+            copy.lastXpMinuteIndex = entry.getValue().lastXpMinuteIndex;
+            newMap.put(entry.getKey(), copy);
+        }
+    }
+
+    /**
+     * Re-sync the XP bar after respawn by picking the player's
+     * highest-tier knowledge and displaying its progress.
+     */
+    public static void restoreXpBar(ServerPlayerEntity player) {
+        Map<Identifier, PlayerKnowledgeState> map = PLAYER_DATA.get(player.getUuid());
+        if (map == null || map.isEmpty()) return;
+
+        // Find the knowledge with the highest tier
+        Identifier bestId = null;
+        int bestTier = -1;
+        for (Map.Entry<Identifier, PlayerKnowledgeState> entry : map.entrySet()) {
+            if (entry.getValue().tier > bestTier) {
+                bestTier = entry.getValue().tier;
+                bestId = entry.getKey();
+            }
+        }
+
+        if (bestId != null) {
+            KnowledgeDefinition def = KnowledgeRegistry.get(bestId);
+            if (def != null) {
+                PlayerKnowledgeState state = map.get(bestId);
+                updateXpBarForKnowledge(player, bestId, def, state);
+            }
+        }
+    }
+
     // ---------------------------------------------------------------------
     // Persistence: write/read to/from player NBT data
     // ---------------------------------------------------------------------
@@ -192,7 +239,7 @@ public class PlayerKnowledgeManager {
             NbtCompound tag = list.getCompound(i);
             if (!tag.contains("id")) continue;
 
-            Identifier id = new Identifier(tag.getString("id"));
+            Identifier id = Identifier.of(tag.getString("id"));
             PlayerKnowledgeState state = new PlayerKnowledgeState();
             state.tier = tag.getInt("tier");
             state.currentMinutes = tag.getInt("minutes");

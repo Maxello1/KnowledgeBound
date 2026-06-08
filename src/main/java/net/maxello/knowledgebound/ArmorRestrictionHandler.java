@@ -84,7 +84,7 @@ public final class ArmorRestrictionHandler {
         }
 
         // 2) Fallback: use material-based defaults (also configurable)
-        ArmorMaterial mat = armorItem.getMaterial();
+        net.minecraft.registry.entry.RegistryEntry<ArmorMaterial> mat = armorItem.getMaterial();
 
         if (mat == ArmorMaterials.LEATHER) {
             return cfg.leatherTier;

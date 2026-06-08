@@ -67,11 +67,20 @@ public abstract class CraftingResultSlotMixin extends Slot {
         if (modified.isEmpty()) {
             KnowledgeBound.LOGGER.debug("[KB MIXIN] Modified is EMPTY, clearing stack.");
             stack.setCount(0);
+            // Also clear the cursor stack — in server-only setups the client
+            // may have already put the item on the cursor before the server response
+            serverPlayer.currentScreenHandler.setCursorStack(ItemStack.EMPTY);
         } else {
             KnowledgeBound.LOGGER.debug("[KB MIXIN] Applying modified stack: dmg={}, count={}",
                     modified.getDamage(), modified.getCount());
             stack.setCount(modified.getCount());
             stack.setDamage(modified.getDamage());
+            // Sync the cursor stack with the modified item
+            serverPlayer.currentScreenHandler.setCursorStack(modified);
         }
+
+        // Force the server to re-sync the entire screen handler to the client,
+        // fixing visual desync in server-only setups
+        serverPlayer.currentScreenHandler.sendContentUpdates();
     }
 }

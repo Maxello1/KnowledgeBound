@@ -59,6 +59,23 @@ public class KnowledgeBoundConfig {
     public double minutesMultiplier = 1.0;
 
     // --------------------------------------------------
+    // Combat damage scaling
+    // --------------------------------------------------
+
+    public List<String> _comment_damageScale = List.of(
+            "Combat damage scaling per knowledge tier.",
+            "Each index maps to a combat tier (0..5).",
+            "Value 1.0 = full damage, 0.5 = half damage, etc.",
+            "Applies to both melee and ranged combat."
+    );
+
+    /**
+     * Damage multiplier per combat tier.
+     * Index 0 = tier 0, index 5 = tier 5.
+     */
+    public double[] combatDamageScale = new double[] { 0.40, 0.55, 0.70, 0.85, 1.0, 1.0 };
+
+    // --------------------------------------------------
     // Gather failure chances (Forestry, Mining, Digging, Farming)
     // --------------------------------------------------
 
@@ -118,7 +135,7 @@ public class KnowledgeBoundConfig {
 
     public List<String> _comment_crafting = List.of(
             "Crafting result chances for Toolsmithing, Weaponsmithing and Armouring.",
-            "Each array entry represents a KNOWLEDGE TIER (0..4).",
+            "Each array entry represents a KNOWLEDGE TIER (0..5).",
             "Inside each entry:",
             "  failChance   = chance to get NO item",
             "  poorChance   = chance to get a POOR quality item (10% durability)",
@@ -128,7 +145,7 @@ public class KnowledgeBoundConfig {
 
     /**
      * Per-tier crafting chances for toolsmithing.
-     * Index 0..4 = knowledge tiers 0..4 (how good the smith is).
+     * Index 0..5 = knowledge tiers 0..5 (how good the smith is).
      */
     public CraftingTierChances[] toolsmithingChances = defaultToolsmithing();
 
@@ -185,7 +202,8 @@ public class KnowledgeBoundConfig {
                 new CraftingTierChances(0.30, 0.50, 0.20), // tier 1
                 new CraftingTierChances(0.20, 0.50, 0.30), // tier 2
                 new CraftingTierChances(0.10, 0.40, 0.50), // tier 3
-                new CraftingTierChances(0.05, 0.25, 0.70)  // tier 4
+                new CraftingTierChances(0.05, 0.25, 0.70), // tier 4
+                new CraftingTierChances(0.00, 0.00, 1.00)  // tier 5 (mastered)
         };
     }
 
@@ -201,7 +219,8 @@ public class KnowledgeBoundConfig {
                 new CraftingTierChances(0.40, 0.40, 0.20),
                 new CraftingTierChances(0.30, 0.40, 0.30),
                 new CraftingTierChances(0.15, 0.35, 0.50),
-                new CraftingTierChances(0.05, 0.25, 0.70)
+                new CraftingTierChances(0.05, 0.25, 0.70),
+                new CraftingTierChances(0.00, 0.00, 1.00)  // tier 5 (mastered)
         };
     }
 
@@ -269,6 +288,18 @@ public class KnowledgeBoundConfig {
     public List<String> extraMiningBlocks   = new ArrayList<>();
     public List<String> extraDiggingBlocks  = new ArrayList<>();
     public List<String> extraFarmingBlocks  = new ArrayList<>();
+
+    // --------------------------------------------------
+    // Fishing base minutes
+    // --------------------------------------------------
+
+    public List<String> _comment_fishing = List.of(
+            "Base minutes for fishing tiers (before minutesMultiplier).",
+            "Fishing only has 3 tiers, so this array should have 3 entries."
+    );
+
+    /** Base minutes for fishing tiers 1, 2, 3 (before multiplier). */
+    public int[] fishingBaseMinutes = new int[] { 60, 120, 240 };
 
     public List<String> _comment_items = List.of(
             "Extra items that should behave like vanilla tools/armor in crafting quality rules.",
