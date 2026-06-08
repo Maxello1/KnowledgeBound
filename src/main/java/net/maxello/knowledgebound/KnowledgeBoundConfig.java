@@ -98,7 +98,7 @@ public class KnowledgeBoundConfig {
     public GatherFailConfig farmingGatherFail  = new GatherFailConfig(0.30, 0.20, 0.10, 0.05, 0.02);
 
     public static class GatherFailConfig {
-        /** Fail chance at tier 0,1,2,3,4 (0–1 range). */
+        /** Fail chance at tier 0,1,2,3,4 (0-1 range). */
         public double tier0;
         public double tier1;
         public double tier2;
@@ -130,39 +130,36 @@ public class KnowledgeBoundConfig {
     }
 
     // --------------------------------------------------
-    // Crafting chances (Tool / Weapon / Armour smithing)
+    // Crafting chances (tier-difference based)
     // --------------------------------------------------
 
     public List<String> _comment_crafting = List.of(
-            "Crafting result chances for Toolsmithing, Weaponsmithing and Armouring.",
-            "Each array entry represents a KNOWLEDGE TIER (0..5).",
+            "Crafting chances are based on the DIFFERENCE between your knowledge tier and the item's tier.",
+            "diff = playerKnowledgeTier - itemTier",
+            "Array entries (6 total):",
+            "  [0] = diff <= -3  (way out of your league)",
+            "  [1] = diff  = -2  (very risky)",
+            "  [2] = diff  = -1  (challenging)",
+            "  [3] = diff  =  0  (at your level)",
+            "  [4] = diff  = +1  (below your skill)",
+            "  [5] = diff >= +2  (trivial)",
             "Inside each entry:",
-            "  failChance   = chance to get NO item",
+            "  failChance   = chance to get NO item (ingredients lost)",
             "  poorChance   = chance to get a POOR quality item (10% durability)",
             "  normalChance = chance to get a NORMAL item (full durability)",
             "The values are automatically normalized if they don't sum to 1.0."
     );
 
     /**
-     * Per-tier crafting chances for toolsmithing.
-     * Index 0..5 = knowledge tiers 0..5 (how good the smith is).
+     * Crafting chances indexed by tier difference.
+     * Index 0 = diff <= -3, index 5 = diff >= +2.
      */
-    public CraftingTierChances[] toolsmithingChances = defaultToolsmithing();
-
-    /**
-     * Per-tier crafting chances for weaponsmithing.
-     */
-    public CraftingTierChances[] weaponsmithingChances = defaultWeaponsmithing();
-
-    /**
-     * Per-tier crafting chances for armouring.
-     */
-    public CraftingTierChances[] armouringChances = defaultArmouring();
+    public CraftingTierChances[] craftingDiffChances = defaultCraftingDiffChances();
 
     public static class CraftingTierChances {
         /** Chance the craft completely fails (no output item). */
         public double failChance;
-        /** Chance the craft is “poor quality” (e.g. 10% durability). */
+        /** Chance the craft is "poor quality" (e.g. 10% durability). */
         public double poorChance;
         /** Chance the craft is normal (full durability). */
         public double normalChance;
@@ -195,34 +192,47 @@ public class KnowledgeBoundConfig {
         }
     }
 
-    private static CraftingTierChances[] defaultToolsmithing() {
-        // Reasonable default curve; tweak in config if you want.
+    private static CraftingTierChances[] defaultCraftingDiffChances() {
         return new CraftingTierChances[] {
-                new CraftingTierChances(0.50, 0.50, 0.00), // knowledge tier 0
-                new CraftingTierChances(0.30, 0.50, 0.20), // tier 1
-                new CraftingTierChances(0.20, 0.50, 0.30), // tier 2
-                new CraftingTierChances(0.10, 0.40, 0.50), // tier 3
-                new CraftingTierChances(0.05, 0.25, 0.70), // tier 4
-                new CraftingTierChances(0.00, 0.00, 1.00)  // tier 5 (mastered)
+                new CraftingTierChances(1.00, 0.00, 0.00), // diff <= -3: impossible
+                new CraftingTierChances(0.85, 0.12, 0.03), // diff  = -2: very risky
+                new CraftingTierChances(0.45, 0.35, 0.20), // diff  = -1: challenging
+                new CraftingTierChances(0.10, 0.15, 0.75), // diff  =  0: at your level
+                new CraftingTierChances(0.00, 0.08, 0.92), // diff  = +1: below your skill
+                new CraftingTierChances(0.00, 0.00, 1.00)  // diff >= +2: trivial
         };
     }
 
-    private static CraftingTierChances[] defaultWeaponsmithing() {
-        // Copy of toolsmithing for now; can be adjusted separately later.
-        return defaultToolsmithing();
+    /**
+     * Looks up the crafting chances for a given tier difference.
+     * diff = playerKnowledgeTier - itemTier
+     */
+    public CraftingTierChances getCraftingChancesForDiff(int diff) {
+        // Map diff to array index: <= -3 -> 0, -2 -> 1, -1 -> 2, 0 -> 3, +1 -> 4, >= +2 -> 5
+        int index;
+        if (diff <= -3) index = 0;
+        else if (diff == -2) index = 1;
+        else if (diff == -1) index = 2;
+        else if (diff == 0) index = 3;
+        else if (diff == 1) index = 4;
+        else index = 5; // diff >= +2
+
+        if (index >= 0 && index < craftingDiffChances.length) {
+            return craftingDiffChances[index];
+        }
+        // Fallback: guaranteed normal
+        return new CraftingTierChances(0.0, 0.0, 1.0);
     }
 
-    private static CraftingTierChances[] defaultArmouring() {
-        // Slightly harsher at low tiers.
-        return new CraftingTierChances[] {
-                new CraftingTierChances(0.60, 0.40, 0.00),
-                new CraftingTierChances(0.40, 0.40, 0.20),
-                new CraftingTierChances(0.30, 0.40, 0.30),
-                new CraftingTierChances(0.15, 0.35, 0.50),
-                new CraftingTierChances(0.05, 0.25, 0.70),
-                new CraftingTierChances(0.00, 0.00, 1.00)  // tier 5 (mastered)
-        };
-    }
+    public List<String> _comment_itemTiers = List.of(
+            "Per-item crafting tier overrides.",
+            "Key: full item id (e.g. 'minecraft:iron_sword' or 'modid:custom_pickaxe').",
+            "Value: the item's required crafting tier (0-4).",
+            "Vanilla items have built-in defaults; use this for modded items."
+    );
+
+    /** Per-item tier overrides (e.g. "modid:custom_sword" -> 3). */
+    public Map<String, Integer> itemCraftingTierOverrides = new HashMap<>();
 
     // --------------------------------------------------
     // Armor equip restrictions (tier per material / item)

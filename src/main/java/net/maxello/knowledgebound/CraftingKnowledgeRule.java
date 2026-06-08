@@ -4,7 +4,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 
-import java.util.Map;
 import java.util.Random;
 
 /**
@@ -12,33 +11,23 @@ import java.util.Random;
  * - chance to fail completely
  * - chance to produce a poor-quality (low durability) item
  * - chance to produce a normal item
+ *
+ * Chances are based on the DIFFERENCE between the player's knowledge tier
+ * and the item's required tier (looked up from CraftingRuleRegistry).
  */
 public class CraftingKnowledgeRule {
-
-    public static class TierChance {
-        public final double goodChance;
-        public final double poorChance;
-
-        public TierChance(double goodChance, double poorChance) {
-            this.goodChance = goodChance;
-            this.poorChance = poorChance;
-        }
-    }
 
     private final Identifier id;
     private final Identifier knowledgeId;
     private final double poorDurabilityFraction;
-    private final Map<Integer, TierChance> tierChances;
     private final Random random = new Random();
 
     public CraftingKnowledgeRule(Identifier id,
                                  Identifier knowledgeId,
-                                 double poorDurabilityFraction,
-                                 Map<Integer, TierChance> tierChances) {
+                                 double poorDurabilityFraction) {
         this.id = id;
         this.knowledgeId = knowledgeId;
         this.poorDurabilityFraction = poorDurabilityFraction;
-        this.tierChances = tierChances;
     }
 
     public Identifier getId() {
@@ -63,17 +52,18 @@ public class CraftingKnowledgeRule {
                            ItemStack originalStack,
                            int knowledgeTier) {
 
-        // Look up the chances for this tier; if not found, use the highest defined tier
-        // (not tier 0!) so over-leveled players get the best available chances.
-        TierChance tc = tierChances.get(knowledgeTier);
-        if (tc == null) {
-            int maxDefined = tierChances.keySet().stream().mapToInt(Integer::intValue).max().orElse(0);
-            tc = tierChances.getOrDefault(maxDefined, new TierChance(1.0, 0.0));
-        }
+        // Look up the item's required crafting tier
+        int itemTier = CraftingRuleRegistry.getItemTier(itemId);
+        int diff = knowledgeTier - itemTier;
+
+        // Get chances from config based on the tier difference
+        KnowledgeBoundConfig.CraftingTierChances tc =
+                KnowledgeBoundConfig.INSTANCE.getCraftingChancesForDiff(diff);
+        tc.normalize();
 
         double roll = random.nextDouble();
 
-        double failChance = Math.max(0.0, 1.0 - tc.goodChance - tc.poorChance);
+        double failChance = Math.max(0.0, tc.failChance);
         double poorChance = Math.max(0.0, tc.poorChance);
 
         if (roll < failChance) {
@@ -103,7 +93,6 @@ public class CraftingKnowledgeRule {
             );
             return poor;
         }
-
 
         // Successful craft at full quality (no extra message)
         return originalStack;
