@@ -86,7 +86,7 @@ public class KnowledgeEvents {
             } else if (isMatureFarmingBlock(state, blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FARMING_ID);
                 if (def != null) {
-                    return handleGatherBlock(world, serverPlayer, pos, state, def, true);
+                    return handleGatherBlock(world, serverPlayer, pos, state, def, false);
                 }
             }
 
@@ -132,9 +132,14 @@ public class KnowledgeEvents {
         }
 
         // Success: let vanilla handle breaking + drops, and grant XP
-        KnowledgeDefinition.ToolTier toolTier =
-                ToolTierHelper.fromItem(player.getMainHandStack());
-        grantXpIfValidTool(player, def, toolTier);
+        if (def.getId().equals(KnowledgeRegistry.FARMING_ID)) {
+            // Farming grants XP regardless of held tool
+            PlayerKnowledgeManager.grantMinuteIfAllowed(player, def.getId());
+        } else {
+            KnowledgeDefinition.ToolTier toolTier =
+                    ToolTierHelper.fromItem(player.getMainHandStack());
+            grantXpIfValidTool(player, def, toolTier);
+        }
 
         return true;
     }
