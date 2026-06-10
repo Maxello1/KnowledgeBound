@@ -46,27 +46,38 @@ public final class KnowledgeBoundTextFormatter {
     }
 
     // --------------------------------------------------
-    //  Crafting result messages (smithing-style)
+    //  Crafting result messages
     // --------------------------------------------------
-    /** Cyan text with purple "<quality>" word for smithing results. */
-    public static Text craftingQualitySmithing(String quality) {
+
+    /** Red failure message for any crafting knowledge */
+    public static Text craftingFail(Identifier knowledgeId) {
+        String name = displayName(knowledgeId);
+        return Text.literal("Your " + name + " attempt failed to yield any items.")
+                .formatted(Formatting.RED);
+    }
+
+    /** Red message: player doesn't have a high enough tier for material job crafting */
+    public static Text craftingLevelTooLow(Identifier knowledgeId) {
+        String name = displayName(knowledgeId);
+        return Text.literal("You don't have enough " + name + " knowledge to work with these materials.")
+                .formatted(Formatting.RED);
+    }
+
+    /** Cyan text with purple "<quality>" word for crafting results. */
+    public static Text craftingQuality(Identifier knowledgeId, String quality) {
+        String name = displayName(knowledgeId);
         MutableText base = Text.literal("You crafted a ")
                 .formatted(Formatting.AQUA);
 
         MutableText qualityWord = Text.literal(quality + " ")
                 .formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD);
 
-        MutableText tail = Text.literal("quality item. Improve your smithing knowledge for better quality.")
+        MutableText tail = Text.literal("quality item. Improve your " + name + " knowledge for better quality.")
                 .formatted(Formatting.AQUA);
 
         return base.append(qualityWord).append(tail);
     }
 
-    /** Red failure message */
-    public static Text craftingFailSmithing() {
-        return Text.literal("Your smithing attempt failed to yield any items.")
-                .formatted(Formatting.RED);
-    }
     /** Red message for gather failures: Forestry, Mining, Digging, Farming. */
     public static Text gatheringFail(Identifier knowledgeId) {
         String name = displayName(knowledgeId);
@@ -74,5 +85,11 @@ public final class KnowledgeBoundTextFormatter {
                 .formatted(Formatting.RED);
     }
 
+    /** Dark red message when proficiency cap blocks leveling up */
+    public static Text proficiencyLimitReached(Identifier knowledgeId) {
+        String name = displayName(knowledgeId);
+        return Text.literal("You've reached your proficiency limit for " + name + ". You cannot advance further.")
+                .formatted(Formatting.DARK_RED);
+    }
 
 }

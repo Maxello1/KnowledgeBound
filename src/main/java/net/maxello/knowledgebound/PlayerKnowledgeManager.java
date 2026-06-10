@@ -69,12 +69,15 @@ public class PlayerKnowledgeManager {
                     : 0;
 
             if (neededForNext > 0) {
-                boolean isSmithingKnowledge =
+                boolean isCraftingKnowledge =
                         knowledgeId.equals(KnowledgeRegistry.TOOLSMITHING_ID) ||
                                 knowledgeId.equals(KnowledgeRegistry.WEAPONSMITHING_ID) ||
-                                knowledgeId.equals(KnowledgeRegistry.ARMOURING_ID);
+                                knowledgeId.equals(KnowledgeRegistry.ARMOURING_ID) ||
+                                knowledgeId.equals(KnowledgeRegistry.CARPENTRY_ID) ||
+                                knowledgeId.equals(KnowledgeRegistry.MASONRY_ID) ||
+                                knowledgeId.equals(KnowledgeRegistry.BEEKEEPING_ID);
 
-                if (!isSmithingKnowledge) {
+                if (!isCraftingKnowledge) {
                     player.sendMessage(
                             KnowledgeBoundTextFormatter.learningTick(knowledgeId),
                             true // action bar
@@ -105,6 +108,17 @@ public class PlayerKnowledgeManager {
         if (needed <= 0) return;
 
         if (state.currentMinutes >= needed) {
+            // check proficiency limits before leveling up
+            if (!canReachTier(player, knowledgeId, def, nextTier)) {
+                // cap the minutes so they don't keep accumulating past the needed
+                state.currentMinutes = needed;
+                player.sendMessage(
+                        KnowledgeBoundTextFormatter.proficiencyLimitReached(knowledgeId),
+                        true
+                );
+                return;
+            }
+
             state.currentMinutes -= needed;
             state.tier = nextTier;
 
@@ -113,6 +127,62 @@ public class PlayerKnowledgeManager {
                     true // action bar
             );
         }
+    }
+
+    /**
+     * Checks proficiency limits. Returns false if leveling up would exceed the cap.
+     */
+    private static boolean canReachTier(ServerPlayerEntity player,
+                                        Identifier knowledgeId,
+                                        KnowledgeDefinition def,
+                                        int targetTier) {
+        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
+        KnowledgeDefinition.JobCategory cat = def.getJobCategory();
+
+        if (cat == KnowledgeDefinition.JobCategory.MATERIAL_5_TIER) {
+            // check master cap (tier 5)
+            if (targetTier >= 5 && cfg.maxMasterMaterial >= 0) {
+                int currentMasters = countJobsAtOrAboveTier(player, KnowledgeDefinition.JobCategory.MATERIAL_5_TIER, 5, knowledgeId);
+                if (currentMasters >= cfg.maxMasterMaterial) return false;
+            }
+            // check tier 4+ cap
+            if (targetTier >= 4 && cfg.maxTier4Material >= 0) {
+                int currentTier4Plus = countJobsAtOrAboveTier(player, KnowledgeDefinition.JobCategory.MATERIAL_5_TIER, 4, knowledgeId);
+                if (currentTier4Plus >= cfg.maxTier4Material) return false;
+            }
+        } else if (cat == KnowledgeDefinition.JobCategory.CLASS_3_TIER) {
+            // check master cap (tier 3 for class jobs)
+            if (targetTier >= 3 && cfg.maxMasterClass >= 0) {
+                int currentMasters = countJobsAtOrAboveTier(player, KnowledgeDefinition.JobCategory.CLASS_3_TIER, 3, knowledgeId);
+                if (currentMasters >= cfg.maxMasterClass) return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Counts how many jobs of the given category the player already has at or above the specified tier,
+     * excluding the knowledge we're currently trying to level up.
+     */
+    private static int countJobsAtOrAboveTier(ServerPlayerEntity player,
+                                               KnowledgeDefinition.JobCategory category,
+                                               int minTier,
+                                               Identifier excludeId) {
+        int count = 0;
+        Map<Identifier, PlayerKnowledgeState> map = PLAYER_DATA.get(player.getUuid());
+        if (map == null) return 0;
+
+        for (Map.Entry<Identifier, PlayerKnowledgeState> entry : map.entrySet()) {
+            if (entry.getKey().equals(excludeId)) continue;
+            KnowledgeDefinition otherDef = KnowledgeRegistry.get(entry.getKey());
+            if (otherDef != null && otherDef.getJobCategory() == category) {
+                if (entry.getValue().tier >= minTier) {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 
     /**

@@ -7,13 +7,24 @@ import java.util.Set;
 import net.minecraft.util.Identifier;
 
 /**
- * Represents a single material-based knowledge, like Forestry, Mining, Toolsmithing...
+ * Represents a single knowledge, like Forestry, Mining, Toolsmithing, Carpentry...
  */
 public class KnowledgeDefinition {
 
     public enum Type {
         SKILL,
         PROFESSION
+    }
+
+    /**
+     * Material jobs have 5 tiers and cannot jump tiers when crafting.
+     * Class jobs have 3 tiers and can jump tiers (with reduced success).
+     */
+    public enum JobCategory {
+        MATERIAL_5_TIER,
+        CLASS_3_TIER,
+        GATHERING,
+        COMBAT
     }
 
     public enum ToolTier {
@@ -32,7 +43,6 @@ public class KnowledgeDefinition {
     }
 
     public static class XpAction {
-        // For now we keep it simple: blocks that count for XP in this knowledge.
         public final List<Identifier> blocks;
 
         public XpAction(List<Identifier> blocks) {
@@ -42,9 +52,10 @@ public class KnowledgeDefinition {
 
     private final Identifier id;
     private final Type type;
+    private final JobCategory jobCategory;
     private final int maxTier;
 
-    // minutes needed per tier (from previous tier → this tier)
+    // minutes needed per tier (from previous tier to this tier)
     private final Map<Integer, Integer> tierMinutes;
 
     // which tool tiers can grant XP when progressing from tier N to N+1
@@ -55,6 +66,7 @@ public class KnowledgeDefinition {
     public KnowledgeDefinition(
             Identifier id,
             Type type,
+            JobCategory jobCategory,
             int maxTier,
             Map<Integer, Integer> tierMinutes,
             Map<Integer, Set<ToolTier>> xpToolTiers,
@@ -62,6 +74,7 @@ public class KnowledgeDefinition {
     ) {
         this.id = id;
         this.type = type;
+        this.jobCategory = jobCategory;
         this.maxTier = maxTier;
         this.tierMinutes = tierMinutes;
         this.xpToolTiers = xpToolTiers;
@@ -74,6 +87,10 @@ public class KnowledgeDefinition {
 
     public Type getType() {
         return type;
+    }
+
+    public JobCategory getJobCategory() {
+        return jobCategory;
     }
 
     public int getMaxTier() {

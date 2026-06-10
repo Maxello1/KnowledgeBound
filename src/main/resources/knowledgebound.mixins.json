@@ -11,7 +11,9 @@
         "EnchantmentScreenHandlerMixin",
         "ExperienceOrbEntityMixin",
         "PlayerEntityMixin",
-        "DamageScalingMixin"
+        "DamageScalingMixin",
+        "StonecutterScreenHandlerMixin",
+        "BeehiveMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

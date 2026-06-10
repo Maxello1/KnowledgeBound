@@ -59,6 +59,35 @@ public class KnowledgeBoundConfig {
     public double minutesMultiplier = 1.0;
 
     // --------------------------------------------------
+    // Class job base minutes (3-tier jobs like Carpentry, Masonry)
+    // --------------------------------------------------
+
+    public List<String> _comment_classJobs = List.of(
+            "Base minutes for class jobs (3-tier jobs like Carpentry, Masonry, Beekeeping).",
+            "These jobs have 3 tiers instead of 5. Array should have 3 entries.",
+            "Applied BEFORE minutesMultiplier."
+    );
+
+    /** Base minutes for class job tiers 1, 2, 3 (before multiplier). */
+    public int[] classJobBaseMinutes = new int[] { 60, 120, 240 };
+
+    // --------------------------------------------------
+    // Proficiency limits
+    // --------------------------------------------------
+
+    public List<String> _comment_proficiency = List.of(
+            "Proficiency limits prevent players from mastering everything.",
+            "- maxMasterMaterial: max number of Material jobs (5-tier) a player can reach Tier 5.",
+            "- maxTier4Material: max number of Material jobs at Tier 4 or higher (includes master).",
+            "- maxMasterClass: max number of Class jobs (3-tier) a player can reach Tier 3.",
+            "Set any value to -1 to disable that limit."
+    );
+
+    public int maxMasterMaterial = 1;
+    public int maxTier4Material = 3;
+    public int maxMasterClass = 1;
+
+    // --------------------------------------------------
     // Combat damage scaling
     // --------------------------------------------------
 
@@ -322,6 +351,80 @@ public class KnowledgeBoundConfig {
     public List<String> extraArmorItems  = new ArrayList<>();
     /** Extra item IDs that should use the weaponsmithing rule. */
     public List<String> extraWeaponItems = new ArrayList<>();
+    /** Extra item IDs that should use the carpentry rule. */
+    public List<String> extraCarpentryItems = new ArrayList<>();
+    /** Extra item IDs that should use the masonry rule. */
+    public List<String> extraMasonryItems = new ArrayList<>();
+
+    // --------------------------------------------------
+    // Blocked crafting items
+    // --------------------------------------------------
+
+    public List<String> _comment_blocked = List.of(
+            "Items that are completely blocked from crafting.",
+            "Players will lose ingredients if they try to craft these.",
+            "Boats are blocked by default."
+    );
+
+    /** Item IDs that cannot be crafted at all. */
+    public List<String> blockedCraftingItems = new ArrayList<>();
+
+    // --------------------------------------------------
+    // Stonecutter settings
+    // --------------------------------------------------
+
+    public List<String> _comment_stonecutter = List.of(
+            "Stonecutter settings.",
+            "- stonecutterCutChanceTier1: chance of cutting yourself at Masonry Tier 1 (0.0-1.0).",
+            "- stonecutterCutReductionPerTier: how much the cut chance decreases per tier above 1.",
+            "  Example: 0.10 base, 0.05 reduction -> tier 1: 10%, tier 2: 5%, tier 3: 0%.",
+            "- Stonecutter requires Masonry Tier 1 to use."
+    );
+
+    public double stonecutterCutChanceTier1 = 0.10;
+    public double stonecutterCutReductionPerTier = 0.05;
+
+    // --------------------------------------------------
+    // Beekeeping
+    // --------------------------------------------------
+
+    public List<String> _comment_beekeeping = List.of(
+            "Beekeeping settings.",
+            "- harvestFailChance: chance per tier that honey harvesting fails (angers bees).",
+            "- betterHoneyChance: chance per tier to get 'better honey' on success.",
+            "- betterHoney: defines what the better honey item is and what effects it gives.",
+            "- silkTouchMinTier: minimum beekeeping tier to move beehives with silk touch."
+    );
+
+    public GatherFailConfig beekeepingHarvestFail = new GatherFailConfig(0.50, 0.30, 0.10, 0.0, 0.0);
+    public double[] betterHoneyChance = new double[] { 0.0, 0.10, 0.25 };
+    public int silkTouchBeehiveMinTier = 3;
+
+    public BetterHoneyConfig betterHoney = new BetterHoneyConfig();
+
+    public static class BetterHoneyConfig {
+        public String itemId = "minecraft:honey_bottle";
+        public String customName = "Royal Honey";
+        public String nameColor = "gold";
+        public List<PotionEffectEntry> effects = List.of(
+                new PotionEffectEntry("minecraft:regeneration", 200, 1),
+                new PotionEffectEntry("minecraft:saturation", 100, 0)
+        );
+    }
+
+    public static class PotionEffectEntry {
+        public String effectId;
+        public int durationTicks;
+        public int amplifier;
+
+        public PotionEffectEntry() {}
+
+        public PotionEffectEntry(String effectId, int durationTicks, int amplifier) {
+            this.effectId = effectId;
+            this.durationTicks = durationTicks;
+            this.amplifier = amplifier;
+        }
+    }
 
     // --------------------------------------------------
     // Load / save

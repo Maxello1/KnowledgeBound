@@ -18,6 +18,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.world.World;
@@ -67,6 +68,11 @@ public class KnowledgeEvents {
             Block block = state.getBlock();
             Identifier blockId = Registries.BLOCK.getId(block);
 
+            // beehive/bee nest silk touch restriction
+            if (block instanceof net.minecraft.block.BeehiveBlock) {
+                return handleBeehiveBreak(serverPlayer, state);
+            }
+
             if (isForestryBlock(blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FORESTRY_ID);
                 if (def != null) {
@@ -92,6 +98,43 @@ public class KnowledgeEvents {
             // not our block, let vanilla handle it
             return true;
         });
+    }
+
+    /**
+     * Beehive breaking: if the player has Silk Touch, they need beekeeping tier 3+
+     * to move beehives. Without silk touch, anyone can break them (drops nothing useful).
+     */
+    private static boolean handleBeehiveBreak(ServerPlayerEntity player, BlockState state) {
+        ItemStack tool = player.getMainHandStack();
+
+        // check if tool has silk touch via enchantment components
+        boolean hasSilkTouch = false;
+        var enchantments = tool.getEnchantments();
+        if (enchantments != null) {
+            for (var entry : enchantments.getEnchantmentEntries()) {
+                Identifier enchId = entry.getKey().getKey().map(k -> k.getValue()).orElse(null);
+                if (enchId != null && enchId.getPath().equals("silk_touch")) {
+                    hasSilkTouch = true;
+                    break;
+                }
+            }
+        }
+
+        if (hasSilkTouch) {
+            int beekeepingTier = PlayerKnowledgeManager.getTier(player, KnowledgeRegistry.BEEKEEPING_ID);
+            int minTier = KnowledgeBoundConfig.INSTANCE.silkTouchBeehiveMinTier;
+
+            if (beekeepingTier < minTier) {
+                player.sendMessage(
+                        Text.literal("You need Beekeeping Tier " + minTier + " to move beehives.")
+                                .formatted(net.minecraft.util.Formatting.RED),
+                        true
+                );
+                return false; // block the break
+            }
+        }
+
+        return true; // allow the break
     }
 
     private static boolean handleGatherBlock(World world,
@@ -365,6 +408,16 @@ public class KnowledgeEvents {
                                            Identifier itemId,
                                            ItemStack originalStack) {
 
+        // 0) Check if the item is completely blocked from crafting
+        if (CraftingRuleRegistry.isBlocked(itemId)) {
+            player.sendMessage(
+                    Text.literal("This item cannot be crafted.")
+                            .formatted(net.minecraft.util.Formatting.RED),
+                    true
+            );
+            return ItemStack.EMPTY;
+        }
+
         // 1) Apply crafting rule (poor / fail / normal) if one exists
         CraftingKnowledgeRule rule = CraftingRuleRegistry.getForItem(itemId);
         ItemStack result = originalStack;
@@ -374,19 +427,26 @@ public class KnowledgeEvents {
             result = rule.apply(player, itemId, originalStack, tier);
         }
 
-        // 2) Grant smithing XP (only if something was actually crafted)
+        // 2) Grant XP for the relevant crafting knowledge (only if something was actually crafted)
         if (!result.isEmpty()) {
-            grantSmithingXp(player, itemId);
+            grantCraftingXp(player, itemId, rule);
         }
 
         return result;
     }
 
     // ----------------------------------------------------------------------
-    // Smithing XP helpers (tool / weapon / armour crafting)
+    // Crafting XP helpers
     // ----------------------------------------------------------------------
 
-    private static void grantSmithingXp(ServerPlayerEntity player, Identifier itemId) {
+    private static void grantCraftingXp(ServerPlayerEntity player, Identifier itemId, CraftingKnowledgeRule rule) {
+        // if the item has a registered rule, use that rule's knowledge
+        if (rule != null) {
+            PlayerKnowledgeManager.grantMinuteIfAllowed(player, rule.getKnowledgeId());
+            return;
+        }
+
+        // fallback: check by item name pattern for items without explicit rules
         String path = itemId.getPath();
 
         if (isToolItem(path)) {

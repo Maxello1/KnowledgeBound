@@ -8,7 +8,7 @@ public class KnowledgeRegistry {
 
     private static final Map<Identifier, KnowledgeDefinition> REGISTRY = new HashMap<>();
 
-    // Public IDs for material/profession knowledges
+    // gathering
     public static final Identifier FORESTRY_ID =
             Identifier.of(KnowledgeBound.MOD_ID, "forestry");
     public static final Identifier MINING_ID =
@@ -18,6 +18,7 @@ public class KnowledgeRegistry {
     public static final Identifier FARMING_ID =
             Identifier.of(KnowledgeBound.MOD_ID, "farming");
 
+    // material jobs (5-tier)
     public static final Identifier TOOLSMITHING_ID =
             Identifier.of(KnowledgeBound.MOD_ID, "toolsmithing");
     public static final Identifier WEAPONSMITHING_ID =
@@ -25,29 +26,49 @@ public class KnowledgeRegistry {
     public static final Identifier ARMOURING_ID =
             Identifier.of(KnowledgeBound.MOD_ID, "armouring");
 
+    // combat
     public static final Identifier RANGED_COMBAT_ID =
             Identifier.of(KnowledgeBound.MOD_ID, "ranged_combat");
+    public static final Identifier MELEE_COMBAT_ID =
+            Identifier.of(KnowledgeBound.MOD_ID, "melee_combat");
+
+    // fishing
     public static final Identifier FISHING_ID =
             Identifier.of(KnowledgeBound.MOD_ID, "fishing");
 
-    public static final Identifier MELEE_COMBAT_ID =
-            Identifier.of(KnowledgeBound.MOD_ID, "melee_combat");
+    // class jobs (3-tier)
+    public static final Identifier CARPENTRY_ID =
+            Identifier.of(KnowledgeBound.MOD_ID, "carpentry");
+    public static final Identifier MASONRY_ID =
+            Identifier.of(KnowledgeBound.MOD_ID, "masonry");
+    public static final Identifier BEEKEEPING_ID =
+            Identifier.of(KnowledgeBound.MOD_ID, "beekeeping");
 
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering knowledges…");
 
+        // gathering
         register(createForestryDefinition());
         register(createMiningDefinition());
         register(createDiggingDefinition());
         register(createFarmingDefinition());
 
+        // material jobs
         register(createToolsmithingDefinition());
         register(createWeaponsmithingDefinition());
         register(createArmouringDefinition());
 
+        // combat
         register(createRangedCombatDefinition());
-        register(createFishingDefinition());
         register(createMeleeCombatDefinition());
+
+        // fishing
+        register(createFishingDefinition());
+
+        // class jobs
+        register(createCarpentryDefinition());
+        register(createMasonryDefinition());
+        register(createBeekeepingDefinition());
     }
 
     private static void register(KnowledgeDefinition def) {
@@ -63,7 +84,7 @@ public class KnowledgeRegistry {
     }
 
     // --------------------------------------------------
-    //  Shared helpers
+    //  helpers
     // --------------------------------------------------
 
     private static Map<Integer, Integer> defaultMinutesPerTier() {
@@ -82,6 +103,21 @@ public class KnowledgeRegistry {
         return minutesPerTier;
     }
 
+    private static Map<Integer, Integer> classJobMinutesPerTier() {
+        Map<Integer, Integer> minutesPerTier = new HashMap<>();
+
+        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
+        double m = cfg.minutesMultiplier;
+        int[] base = cfg.classJobBaseMinutes;
+
+        for (int i = 0; i < base.length; i++) {
+            int tier = i + 1;
+            int value = (int) Math.round(base[i] * m);
+            minutesPerTier.put(tier, Math.max(1, value));
+        }
+
+        return minutesPerTier;
+    }
 
     private static Map<Integer, Set<KnowledgeDefinition.ToolTier>> defaultMaterialTierProgression() {
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
@@ -93,21 +129,24 @@ public class KnowledgeRegistry {
         return xpToolTiers;
     }
 
+    // empty tool tier map for class jobs (xp granted by crafting, not by tool)
+    private static Map<Integer, Set<KnowledgeDefinition.ToolTier>> noToolTiers() {
+        return new HashMap<>();
+    }
+
     // --------------------------------------------------
     //  Forestry
     // --------------------------------------------------
 
     private static KnowledgeDefinition createForestryDefinition() {
-        Identifier id = FORESTRY_ID;
-        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
-        int maxTier = 5;
-
-        Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
-        Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = defaultMaterialTierProgression();
-        List<KnowledgeDefinition.XpAction> xpActions = List.of();
-
         return new KnowledgeDefinition(
-                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+                FORESTRY_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.GATHERING,
+                5,
+                defaultMinutesPerTier(),
+                defaultMaterialTierProgression(),
+                List.of()
         );
     }
 
@@ -116,16 +155,14 @@ public class KnowledgeRegistry {
     // --------------------------------------------------
 
     private static KnowledgeDefinition createMiningDefinition() {
-        Identifier id = MINING_ID;
-        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
-        int maxTier = 5;
-
-        Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
-        Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = defaultMaterialTierProgression();
-        List<KnowledgeDefinition.XpAction> xpActions = List.of();
-
         return new KnowledgeDefinition(
-                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+                MINING_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.GATHERING,
+                5,
+                defaultMinutesPerTier(),
+                defaultMaterialTierProgression(),
+                List.of()
         );
     }
 
@@ -134,16 +171,14 @@ public class KnowledgeRegistry {
     // --------------------------------------------------
 
     private static KnowledgeDefinition createDiggingDefinition() {
-        Identifier id = DIGGING_ID;
-        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
-        int maxTier = 5;
-
-        Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
-        Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = defaultMaterialTierProgression();
-        List<KnowledgeDefinition.XpAction> xpActions = List.of();
-
         return new KnowledgeDefinition(
-                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+                DIGGING_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.GATHERING,
+                5,
+                defaultMinutesPerTier(),
+                defaultMaterialTierProgression(),
+                List.of()
         );
     }
 
@@ -152,12 +187,6 @@ public class KnowledgeRegistry {
     // --------------------------------------------------
 
     private static KnowledgeDefinition createFarmingDefinition() {
-        Identifier id = FARMING_ID;
-        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
-        int maxTier = 5;
-
-        Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
-
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
         xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.FIST, KnowledgeDefinition.ToolTier.WOOD));
         xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.WOOD, KnowledgeDefinition.ToolTier.STONE));
@@ -165,10 +194,14 @@ public class KnowledgeRegistry {
         xpToolTiers.put(3, EnumSet.of(KnowledgeDefinition.ToolTier.COPPER, KnowledgeDefinition.ToolTier.IRON));
         xpToolTiers.put(4, EnumSet.of(KnowledgeDefinition.ToolTier.IRON, KnowledgeDefinition.ToolTier.DIAMOND));
 
-        List<KnowledgeDefinition.XpAction> xpActions = List.of();
-
         return new KnowledgeDefinition(
-                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+                FARMING_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.GATHERING,
+                5,
+                defaultMinutesPerTier(),
+                xpToolTiers,
+                List.of()
         );
     }
 
@@ -177,16 +210,14 @@ public class KnowledgeRegistry {
     // --------------------------------------------------
 
     private static KnowledgeDefinition createToolsmithingDefinition() {
-        Identifier id = TOOLSMITHING_ID;
-        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
-        int maxTier = 5;
-
-        Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
-        Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = defaultMaterialTierProgression();
-        List<KnowledgeDefinition.XpAction> xpActions = List.of();
-
         return new KnowledgeDefinition(
-                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+                TOOLSMITHING_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.MATERIAL_5_TIER,
+                5,
+                defaultMinutesPerTier(),
+                defaultMaterialTierProgression(),
+                List.of()
         );
     }
 
@@ -195,16 +226,14 @@ public class KnowledgeRegistry {
     // --------------------------------------------------
 
     private static KnowledgeDefinition createWeaponsmithingDefinition() {
-        Identifier id = WEAPONSMITHING_ID;
-        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
-        int maxTier = 5;
-
-        Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
-        Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = defaultMaterialTierProgression();
-        List<KnowledgeDefinition.XpAction> xpActions = List.of();
-
         return new KnowledgeDefinition(
-                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+                WEAPONSMITHING_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.MATERIAL_5_TIER,
+                5,
+                defaultMinutesPerTier(),
+                defaultMaterialTierProgression(),
+                List.of()
         );
     }
 
@@ -213,12 +242,6 @@ public class KnowledgeRegistry {
     // --------------------------------------------------
 
     private static KnowledgeDefinition createArmouringDefinition() {
-        Identifier id = ARMOURING_ID;
-        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
-        int maxTier = 5;
-
-        Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
-
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
         xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.LEATHER));
         xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.CHAINMAIL));
@@ -226,10 +249,14 @@ public class KnowledgeRegistry {
         xpToolTiers.put(3, EnumSet.of(KnowledgeDefinition.ToolTier.IRON));
         xpToolTiers.put(4, EnumSet.of(KnowledgeDefinition.ToolTier.DIAMOND));
 
-        List<KnowledgeDefinition.XpAction> xpActions = List.of();
-
         return new KnowledgeDefinition(
-                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+                ARMOURING_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.MATERIAL_5_TIER,
+                5,
+                defaultMinutesPerTier(),
+                xpToolTiers,
+                List.of()
         );
     }
 
@@ -238,12 +265,6 @@ public class KnowledgeRegistry {
     // --------------------------------------------------
 
     private static KnowledgeDefinition createRangedCombatDefinition() {
-        Identifier id = RANGED_COMBAT_ID;
-        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
-        int maxTier = 5;
-
-        Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
-
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
         xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.BOW));
         xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.BOW, KnowledgeDefinition.ToolTier.CROSSBOW));
@@ -251,10 +272,14 @@ public class KnowledgeRegistry {
         xpToolTiers.put(3, EnumSet.of(KnowledgeDefinition.ToolTier.CROSSBOW));
         xpToolTiers.put(4, EnumSet.of(KnowledgeDefinition.ToolTier.CROSSBOW));
 
-        List<KnowledgeDefinition.XpAction> xpActions = List.of();
-
         return new KnowledgeDefinition(
-                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+                RANGED_COMBAT_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.COMBAT,
+                5,
+                defaultMinutesPerTier(),
+                xpToolTiers,
+                List.of()
         );
     }
 
@@ -263,10 +288,6 @@ public class KnowledgeRegistry {
     // --------------------------------------------------
 
     private static KnowledgeDefinition createFishingDefinition() {
-        Identifier id = FISHING_ID;
-        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.PROFESSION;
-        int maxTier = 3;
-
         Map<Integer, Integer> minutesPerTier = new HashMap<>();
         KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
         int[] fishBase = cfg.fishingBaseMinutes;
@@ -280,10 +301,14 @@ public class KnowledgeRegistry {
         xpToolTiers.put(1, EnumSet.of(KnowledgeDefinition.ToolTier.FISHING_ROD));
         xpToolTiers.put(2, EnumSet.of(KnowledgeDefinition.ToolTier.FISHING_ROD));
 
-        List<KnowledgeDefinition.XpAction> xpActions = List.of();
-
         return new KnowledgeDefinition(
-                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+                FISHING_ID,
+                KnowledgeDefinition.Type.PROFESSION,
+                KnowledgeDefinition.JobCategory.GATHERING,
+                3,
+                minutesPerTier,
+                xpToolTiers,
+                List.of()
         );
     }
 
@@ -292,16 +317,62 @@ public class KnowledgeRegistry {
     // --------------------------------------------------
 
     private static KnowledgeDefinition createMeleeCombatDefinition() {
-        Identifier id = MELEE_COMBAT_ID;
-        KnowledgeDefinition.Type type = KnowledgeDefinition.Type.SKILL;
-        int maxTier = 5;
-
-        Map<Integer, Integer> minutesPerTier = defaultMinutesPerTier();
-        Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = defaultMaterialTierProgression();
-        List<KnowledgeDefinition.XpAction> xpActions = List.of();
-
         return new KnowledgeDefinition(
-                id, type, maxTier, minutesPerTier, xpToolTiers, xpActions
+                MELEE_COMBAT_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.COMBAT,
+                5,
+                defaultMinutesPerTier(),
+                defaultMaterialTierProgression(),
+                List.of()
+        );
+    }
+
+    // --------------------------------------------------
+    //  Carpentry (class job, 3 tiers)
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createCarpentryDefinition() {
+        return new KnowledgeDefinition(
+                CARPENTRY_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.CLASS_3_TIER,
+                3,
+                classJobMinutesPerTier(),
+                noToolTiers(),
+                List.of()
+        );
+    }
+
+    // --------------------------------------------------
+    //  Masonry (class job, 3 tiers)
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createMasonryDefinition() {
+        return new KnowledgeDefinition(
+                MASONRY_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.CLASS_3_TIER,
+                3,
+                classJobMinutesPerTier(),
+                noToolTiers(),
+                List.of()
+        );
+    }
+
+    // --------------------------------------------------
+    //  Beekeeping (class job, 3 tiers)
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createBeekeepingDefinition() {
+        return new KnowledgeDefinition(
+                BEEKEEPING_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.CLASS_3_TIER,
+                3,
+                classJobMinutesPerTier(),
+                noToolTiers(),
+                List.of()
         );
     }
 }

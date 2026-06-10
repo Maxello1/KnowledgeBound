@@ -7,13 +7,9 @@ import net.minecraft.util.Identifier;
 import java.util.Random;
 
 /**
- * Defines how a particular set of recipes behaves under knowledge:
- * - chance to fail completely
- * - chance to produce a poor-quality (low durability) item
- * - chance to produce a normal item
- *
- * Chances are based on the DIFFERENCE between the player's knowledge tier
- * and the item's required tier (looked up from CraftingRuleRegistry).
+ * Handles crafting outcomes based on the diff between player tier and item tier.
+ * Material jobs hard-block tier jumps (100% fail if diff < 0).
+ * Class jobs can jump tiers using the standard diff table.
  */
 public class CraftingKnowledgeRule {
 
@@ -40,12 +36,6 @@ public class CraftingKnowledgeRule {
 
     /**
      * Apply this rule to the crafted stack.
-     *
-     * @param player        the crafter
-     * @param itemId        ID of the crafted item
-     * @param originalStack vanilla output
-     * @param knowledgeTier player's tier in the relevant knowledge
-     * @return modified stack, original stack, or EMPTY on full failure
      */
     public ItemStack apply(ServerPlayerEntity player,
                            Identifier itemId,
@@ -55,6 +45,20 @@ public class CraftingKnowledgeRule {
         // get required tier
         int itemTier = CraftingRuleRegistry.getItemTier(itemId);
         int diff = knowledgeTier - itemTier;
+
+        // check if this is a material job
+        KnowledgeDefinition def = KnowledgeRegistry.get(knowledgeId);
+        boolean isMaterialJob = def != null &&
+                def.getJobCategory() == KnowledgeDefinition.JobCategory.MATERIAL_5_TIER;
+
+        // material jobs can't jump tiers at all
+        if (isMaterialJob && diff < 0) {
+            player.sendMessage(
+                    KnowledgeBoundTextFormatter.craftingLevelTooLow(knowledgeId),
+                    true
+            );
+            return ItemStack.EMPTY;
+        }
 
         // chances based on diff
         KnowledgeBoundConfig.CraftingTierChances tc =
@@ -69,7 +73,7 @@ public class CraftingKnowledgeRule {
         if (roll < failChance) {
             // rip item
             player.sendMessage(
-                    KnowledgeBoundTextFormatter.craftingFailSmithing(),
+                    KnowledgeBoundTextFormatter.craftingFail(knowledgeId),
                     true
             );
             return ItemStack.EMPTY;
@@ -88,7 +92,7 @@ public class CraftingKnowledgeRule {
 
             // send poor quality actionbar
             player.sendMessage(
-                    KnowledgeBoundTextFormatter.craftingQualitySmithing("poor"),
+                    KnowledgeBoundTextFormatter.craftingQuality(knowledgeId, "poor"),
                     true
             );
             return poor;
