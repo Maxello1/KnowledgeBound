@@ -41,16 +41,15 @@ public class KnowledgeEvents {
     }
 
     // ----------------------------------------------------------------------
-    // Respawn: restore knowledge XP bar after death
+    // restore xp bar after death
     // ----------------------------------------------------------------------
 
     private static void registerRespawnRestore() {
         ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
-            // Copy knowledge data from the old player to the new one
+            // move data to new body
             PlayerKnowledgeManager.copyData(oldPlayer, newPlayer);
 
-            // Delay XP bar restore by 1 tick — vanilla hasn't finished
-            // initializing the new player entity at this point
+            // delay 1 tick, vanilla still loading player
             newPlayer.server.execute(() -> {
                 PlayerKnowledgeManager.restoreXpBar(newPlayer);
             });
@@ -90,7 +89,7 @@ public class KnowledgeEvents {
                 }
             }
 
-            // Not one of our knowledge blocks → vanilla behaviour.
+            // not our block, let vanilla handle it
             return true;
         });
     }
@@ -110,8 +109,7 @@ public class KnowledgeEvents {
         boolean fail = RANDOM.nextDouble() < failChance;
 
         if (fail) {
-            // Scuffed gather: let vanilla break the block (keeps client in sync),
-            // then remove any dropped items server-side on the next tick.
+            // scuffed gather: let vanilla break it so client syncs, then delete drops
             if (world instanceof ServerWorld serverWorld) {
                 // Schedule drop removal for next tick to avoid client-server desync
                 player.server.execute(() -> {
@@ -234,7 +232,7 @@ public class KnowledgeEvents {
     private static boolean isMatureFarmingBlock(BlockState state, Identifier blockId) {
         Block block = state.getBlock();
 
-        // Check vanilla crops — only process if at max age
+        // vanilla crops - only process if max age
         if (block instanceof CropBlock cropBlock) {
             if (!cropBlock.isMature(state)) {
                 return false; // not fully grown, skip entirely
@@ -249,7 +247,7 @@ public class KnowledgeEvents {
             return vanilla || matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraFarmingBlocks);
         }
 
-        // Non-crop farming blocks from config (e.g. modded) — always process
+        // modded/extra crops - always process
         return matchesExtraBlock(blockId, KnowledgeBoundConfig.INSTANCE.extraFarmingBlocks);
     }
 
@@ -333,7 +331,7 @@ public class KnowledgeEvents {
                 return true;
             }
 
-            // What is the player holding? (bow / crossbow)
+            // what are we holding?
             KnowledgeDefinition.ToolTier toolTier =
                     ToolTierHelper.fromItem(player.getMainHandStack());
 

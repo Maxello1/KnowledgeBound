@@ -26,12 +26,12 @@ public final class ArmorRestrictionHandler {
     }
 
     private static void checkPlayerArmor(ServerPlayerEntity player) {
-        // Combat knowledge = best of Melee + Ranged Combat
+        // use the highest combat tier
         int meleeTier  = PlayerKnowledgeManager.getTier(player, KnowledgeRegistry.MELEE_COMBAT_ID);
         int rangedTier = PlayerKnowledgeManager.getTier(player, KnowledgeRegistry.RANGED_COMBAT_ID);
         int combatTier = Math.max(meleeTier, rangedTier);
 
-        // Check all armor slots
+        // loop armor slots
         checkSlot(player, EquipmentSlot.HEAD,  combatTier);
         checkSlot(player, EquipmentSlot.CHEST, combatTier);
         checkSlot(player, EquipmentSlot.LEGS,  combatTier);
@@ -45,7 +45,7 @@ public final class ArmorRestrictionHandler {
 
         int requiredTier = getRequiredArmourTier(armorItem, stack);
         if (requiredTier < 0) {
-            // Unknown / unrestricted armor → allowed
+            // let vanilla handle unrestricted armor
             return;
         }
 
@@ -57,11 +57,11 @@ public final class ArmorRestrictionHandler {
             // Action bar message
             player.sendMessage(msg, true);
 
-            // Remove from armor slot
+            // unequip
             ItemStack copy = stack.copy();
             player.equipStack(slot, ItemStack.EMPTY);
 
-            // Try to put it back into inventory; if full, drop it
+            // bounce to inv or drop
             if (!player.getInventory().insertStack(copy)) {
                 player.dropItem(copy, false);
             }
@@ -74,7 +74,7 @@ public final class ArmorRestrictionHandler {
     private static int getRequiredArmourTier(ArmorItem armorItem, ItemStack stack) {
         KnowledgeBoundConfig.ArmorTierConfig cfg = KnowledgeBoundConfig.INSTANCE.armorTiers;
 
-        // 1) Check per-item override from config.extraItemTiers
+        // 1) config override
         Identifier itemId = Registries.ITEM.getId(armorItem);
         if (itemId != null) {
             Integer override = cfg.extraItemTiers.get(itemId.toString());
@@ -83,7 +83,7 @@ public final class ArmorRestrictionHandler {
             }
         }
 
-        // 2) Fallback: use material-based defaults (also configurable)
+        // 2) vanilla materials
         net.minecraft.registry.entry.RegistryEntry<ArmorMaterial> mat = armorItem.getMaterial();
 
         if (mat == ArmorMaterials.LEATHER) {

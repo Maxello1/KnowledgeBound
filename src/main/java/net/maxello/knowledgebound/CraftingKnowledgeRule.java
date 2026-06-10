@@ -52,11 +52,11 @@ public class CraftingKnowledgeRule {
                            ItemStack originalStack,
                            int knowledgeTier) {
 
-        // Look up the item's required crafting tier
+        // get required tier
         int itemTier = CraftingRuleRegistry.getItemTier(itemId);
         int diff = knowledgeTier - itemTier;
 
-        // Get chances from config based on the tier difference
+        // chances based on diff
         KnowledgeBoundConfig.CraftingTierChances tc =
                 KnowledgeBoundConfig.INSTANCE.getCraftingChancesForDiff(diff);
         tc.normalize();
@@ -67,7 +67,7 @@ public class CraftingKnowledgeRule {
         double poorChance = Math.max(0.0, tc.poorChance);
 
         if (roll < failChance) {
-            // Total failure: no item, red message
+            // rip item
             player.sendMessage(
                     KnowledgeBoundTextFormatter.craftingFailSmithing(),
                     true
@@ -76,7 +76,7 @@ public class CraftingKnowledgeRule {
         }
 
         if (roll < failChance + poorChance) {
-            // Poor quality item with reduced durability
+            // scuffed craft
             ItemStack poor = originalStack.copy();
             int maxDmg = poor.getMaxDamage();
 
@@ -86,7 +86,7 @@ public class CraftingKnowledgeRule {
                 poor.setDamage(damage);
             }
 
-            // Cyan + purple "poor" quality line
+            // send poor quality actionbar
             player.sendMessage(
                     KnowledgeBoundTextFormatter.craftingQualitySmithing("poor"),
                     true
@@ -94,7 +94,7 @@ public class CraftingKnowledgeRule {
             return poor;
         }
 
-        // Successful craft at full quality (no extra message)
+        // normal craft
         return originalStack;
     }
 }

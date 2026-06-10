@@ -7,10 +7,10 @@ import java.util.Map;
 
 public class CraftingRuleRegistry {
 
-    // Rules keyed by crafted ITEM id
+    // rule map
     private static final Map<Identifier, CraftingKnowledgeRule> RULES_BY_ITEM = new HashMap<>();
 
-    // Item crafting tiers keyed by item id
+    // tier map
     private static final Map<Identifier, Integer> ITEM_TIERS = new HashMap<>();
 
     public static void init() {
@@ -109,7 +109,7 @@ public class CraftingRuleRegistry {
                 Identifier.of("minecraft", "netherite_hoe")
         );
 
-        // Extra tool items from config (default to tier 0, overridable via itemCraftingTierOverrides)
+        // extra config items (default tier 0 unless overridden)
         for (String idStr : KnowledgeBoundConfig.INSTANCE.extraToolItems) {
             try {
                 Identifier id = Identifier.of(idStr);
@@ -177,7 +177,7 @@ public class CraftingRuleRegistry {
                 Identifier.of("minecraft", "netherite_boots")
         );
 
-        // Extra armor items from config
+        // extra config items
         for (String idStr : KnowledgeBoundConfig.INSTANCE.extraArmorItems) {
             try {
                 Identifier id = Identifier.of(idStr);
@@ -228,7 +228,7 @@ public class CraftingRuleRegistry {
                 Identifier.of("minecraft", "netherite_sword")
         );
 
-        // Extra weapons from config
+        // extra config items
         for (String idStr : KnowledgeBoundConfig.INSTANCE.extraWeaponItems) {
             try {
                 Identifier id = Identifier.of(idStr);
