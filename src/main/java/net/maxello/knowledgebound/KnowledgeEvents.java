@@ -46,6 +46,11 @@ public class KnowledgeEvents {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 PlayerKnowledgeManager.sendFullSync(handler.getPlayer())
         );
+
+        // Clean up scoreboard HUD state when a player leaves
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
+                KnowledgeScoreboardHud.onPlayerLeave(handler.getPlayer())
+        );
     }
 
     // ----------------------------------------------------------------------

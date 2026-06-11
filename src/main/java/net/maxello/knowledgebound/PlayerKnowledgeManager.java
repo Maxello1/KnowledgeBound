@@ -86,6 +86,7 @@ public class PlayerKnowledgeManager {
             // Only try to level up if we actually gained XP
             tryLevelUp(player, knowledgeId, def, state);
             sendFullSync(player);
+            KnowledgeScoreboardHud.updateScoreboard(player);
         }
 
         // ALWAYS: XP bar should reflect this knowledge's current state

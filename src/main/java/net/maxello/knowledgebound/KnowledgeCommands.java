@@ -38,6 +38,7 @@ public final class KnowledgeCommands {
             // /kb set <player> <knowledge> <tier> — set a player's tier
             // /kb reset <player> [knowledge] — reset one or all knowledges
             // /kb reload — reload config
+            // /kb hud — toggle sidebar knowledge display
             // /kb help — show command list
 
             dispatcher.register(
@@ -77,6 +78,10 @@ public final class KnowledgeCommands {
                             .then(CommandManager.literal("reload")
                                     .requires(src -> src.hasPermissionLevel(2))
                                     .executes(KnowledgeCommands::executeReload))
+
+                            // /kb hud — toggle sidebar (any player)
+                            .then(CommandManager.literal("hud")
+                                    .executes(KnowledgeCommands::executeHud))
             );
 
             // /checkxp — legacy alias for /kb
@@ -108,6 +113,8 @@ public final class KnowledgeCommands {
                 .append(Text.literal(" — Reset one or all knowledges [OP]").formatted(Formatting.GRAY)), false);
         src.sendFeedback(() -> Text.literal("/kb reload").formatted(Formatting.YELLOW)
                 .append(Text.literal(" — Reload config from disk [OP]").formatted(Formatting.GRAY)), false);
+        src.sendFeedback(() -> Text.literal("/kb hud").formatted(Formatting.YELLOW)
+                .append(Text.literal(" — Toggle knowledge sidebar display").formatted(Formatting.GRAY)), false);
 
         return Command.SINGLE_SUCCESS;
     }
@@ -284,6 +291,29 @@ public final class KnowledgeCommands {
         KnowledgeBoundConfig.load();
 
         src.sendFeedback(() -> Text.literal("KnowledgeBound config reloaded!").formatted(Formatting.GREEN), true);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    // --------------------------------------------------
+    // /kb hud
+    // --------------------------------------------------
+
+    private static int executeHud(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource src = ctx.getSource();
+        ServerPlayerEntity player;
+        try {
+            player = src.getPlayerOrThrow();
+        } catch (Exception e) {
+            src.sendError(Text.literal("This command can only be used by a player."));
+            return 0;
+        }
+
+        boolean nowOn = KnowledgeScoreboardHud.toggle(player);
+        if (nowOn) {
+            src.sendFeedback(() -> Text.literal("Knowledge HUD enabled.").formatted(Formatting.GREEN), false);
+        } else {
+            src.sendFeedback(() -> Text.literal("Knowledge HUD disabled.").formatted(Formatting.GREEN), false);
+        }
         return Command.SINGLE_SUCCESS;
     }
 
