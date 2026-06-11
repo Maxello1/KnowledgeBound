@@ -70,9 +70,21 @@ public abstract class BeehiveMixin {
                     true
             );
 
-            // release bees as angry
+            // release bees stored inside the hive as angry
             if (world.getBlockEntity(pos) instanceof BeehiveBlockEntity beehiveEntity) {
                 beehiveEntity.angerBees(serverPlayer, state, BeehiveBlockEntity.BeeState.EMERGENCY);
+            }
+
+            // also anger any nearby bees that are already outside
+            List<net.minecraft.entity.passive.BeeEntity> nearbyBees = world.getEntitiesByClass(
+                    net.minecraft.entity.passive.BeeEntity.class,
+                    new net.minecraft.util.math.Box(pos).expand(10.0),
+                    bee -> true
+            );
+            for (net.minecraft.entity.passive.BeeEntity bee : nearbyBees) {
+                bee.setAngryAt(serverPlayer.getUuid());
+                bee.setAngerTime(400 + RANDOM.nextInt(400)); // 20-40 seconds
+                bee.setTarget(serverPlayer);
             }
 
             // grant xp even on failure (you're still learning)
