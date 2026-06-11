@@ -1,5 +1,6 @@
 package net.maxello.knowledgebound;
 
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
@@ -53,15 +54,12 @@ public class PlayerKnowledgeManager {
         if (def == null) return;
 
         PlayerKnowledgeState state = getState(player, knowledgeId);
-        long currentMinute = player.getWorld().getTime() / (20L * 60L);
-
-        boolean gainedMinute = false;
+        long currentMinute = System.currentTimeMillis() / 60000L;
 
         // Only one XP tick per real-time minute per knowledge
         if (currentMinute > state.lastXpMinuteIndex) {
             state.lastXpMinuteIndex = currentMinute;
             state.currentMinutes += 1;
-            gainedMinute = true;
 
             int nextTier = state.tier + 1;
             int neededForNext = (nextTier <= def.getMaxTier())
@@ -87,6 +85,7 @@ public class PlayerKnowledgeManager {
 
             // Only try to level up if we actually gained XP
             tryLevelUp(player, knowledgeId, def, state);
+            sendFullSync(player);
         }
 
         // ALWAYS: XP bar should reflect this knowledge's current state
@@ -317,5 +316,29 @@ public class PlayerKnowledgeManager {
 
             map.put(id, state);
         }
+    }
+
+    /**
+     * Sends the player's full knowledge state to their client for HUD display.
+     * Called after any state change (XP gain or level-up).
+     */
+    public static void sendFullSync(ServerPlayerEntity player) {
+        Map<Identifier, PlayerKnowledgeState> map = PLAYER_DATA.get(player.getUuid());
+        if (map == null) return;
+
+        Map<String, int[]> data = new HashMap<>();
+        for (Map.Entry<Identifier, PlayerKnowledgeState> entry : map.entrySet()) {
+            Identifier id = entry.getKey();
+            PlayerKnowledgeState state = entry.getValue();
+            KnowledgeDefinition def = KnowledgeRegistry.get(id);
+            int maxTier = def != null ? def.getMaxTier() : 5;
+            int needed = 0;
+            if (def != null && state.tier < maxTier) {
+                needed = def.getMinutesForTier(state.tier + 1);
+            }
+            data.put(id.toString(), new int[]{state.tier, state.currentMinutes, needed, maxTier});
+        }
+
+        ServerPlayNetworking.send(player, new KnowledgeSyncPayload(data));
     }
 }
