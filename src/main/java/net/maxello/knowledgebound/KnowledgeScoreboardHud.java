@@ -126,11 +126,13 @@ public final class KnowledgeScoreboardHud {
         if (!ENABLED_PLAYERS.contains(player.getUuid())) return;
 
         Scoreboard scoreboard = player.getScoreboard();
+
+        // clear old scores and recreate objective
+        cleanupScores(scoreboard);
+
+        // re-fetch after cleanup (cleanupScores removes and recreates it)
         ScoreboardObjective obj = scoreboard.getNullableObjective(OBJECTIVE_NAME);
         if (obj == null) return;
-
-        // clear old scores for this objective
-        cleanupScores(scoreboard);
 
         // populate rows - higher score = higher on sidebar
         int score = ORDER.size();
