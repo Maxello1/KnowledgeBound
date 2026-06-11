@@ -1,36 +1,110 @@
 # KnowledgeBound
 
-**KnowledgeBound** is a server-side RPG skill progression and balancing mod for Minecraft (Fabric 1.21.1). It replaces standard vanilla progression with a time-and-action-based RPG knowledge system. 
+**KnowledgeBound** is a server-side RPG skill progression and balancing mod for Minecraft (Fabric 1.21.1). It replaces standard vanilla progression with a time-and-action-based knowledge system.
 
-Players start knowing nothing—they will fail to gather resources, craft poor-quality tools, and deal very little damage in combat. As they perform actions, they level up their "Knowledge" in various categories, unlocking full vanilla capabilities and mastering their skills.
+Players start knowing nothing — they will fail to gather resources, craft poor-quality tools, and deal very little damage in combat. As they perform actions over time, they level up their "Knowledge" in various categories, unlocking full vanilla capabilities and eventually mastering their craft.
 
-Because KnowledgeBound is **server-side**, clients do not need to install the mod to play on the server (though visual client-side glitches like block desyncs on failure are handled smoothly by the server).
+Because KnowledgeBound is **server-side**, clients do not need to install the mod to play on a KnowledgeBound server. However, installing it on the client enables a **Knowledge HUD overlay** (press `K`) showing all skill tiers and progress bars in real time.
+
+---
+
+## 📋 Table of Contents
+
+- [Core Concepts & Progression](#-core-concepts--progression)
+- [Job Categories](#-job-categories)
+- [Gathering Mechanics](#-gathering-mechanics)
+- [Crafting Mechanics (Material Jobs)](#️-crafting-mechanics-material-jobs)
+- [Crafting Mechanics (Class Jobs)](#-crafting-mechanics-class-jobs)
+- [Carpentry](#-carpentry)
+- [Masonry](#-masonry)
+- [Beekeeping](#-beekeeping)
+- [Stonecutter](#-stonecutter)
+- [Combat & Armor Mechanics](#️-combat--armor-mechanics)
+- [Fishing](#-fishing)
+- [Proficiency Limits](#-proficiency-limits)
+- [Blocked Items](#-blocked-items)
+- [Client-Side HUD](#-client-side-hud)
+- [Configuration Reference](#️-full-configuration-reference)
+- [Admin Commands](#-admin-commands)
+- [Datapack Compatibility](#-datapack-compatibility)
+- [Current Limitations](#-current-limitations)
+- [Credits](#-credits)
 
 ---
 
 ## 🌟 Core Concepts & Progression
 
-Unlike traditional RPG mods that give XP per block broken or mob killed, KnowledgeBound grants XP based on **active time spent performing the activity**. 
-- You gain "minutes" in a skill for actively using it.
-- There is an internal cooldown to prevent players from spamming actions to farm XP artificially.
-- You must perform the right action with the right tool (e.g., breaking stone with a pickaxe of an appropriate tier).
+Unlike traditional RPG mods that give XP per block broken or mob killed, KnowledgeBound grants XP based on **real-time minutes spent performing an activity**.
 
-### The 10 Knowledge Categories
-Progression is split into 10 distinct knowledge categories. Each category has **6 Tiers (Tier 0 to Tier 5)**.
+- You gain 1 "minute" of XP per real-time minute that you are actively using the skill (breaking blocks, crafting items, dealing damage, etc.).
+- There is an internal cooldown — you can only gain 1 minute per real-time minute per knowledge, preventing spam.
+- You must perform the right action with the right tool tier (e.g., breaking stone with a stone pickaxe when leveling from Tier 1 to Tier 2 in Mining).
+- XP is tracked using **real-time** (`System.currentTimeMillis()`), not game ticks, so pausing the game or TPS lag won't affect progression.
 
-- **Gathering:** Forestry, Mining, Digging, Farming, Fishing
-- **Crafting:** Toolsmithing, Weaponsmithing, Armouring
-- **Combat:** Melee Combat, Ranged Combat
+---
+
+## 📂 Job Categories
+
+Knowledge categories are split into four types, each with different progression rules:
+
+### Material Jobs (5-Tier) — *Cannot jump tiers*
+These jobs track the material you're working with. If your tier is lower than the item's required tier, crafting **always fails** (100%). No tier jumping allowed.
+
+| Job | Max Tier | XP Source |
+|:---|:---:|:---|
+| **Toolsmithing** | 5 | Crafting tools (pickaxes, axes, shovels, hoes) |
+| **Weaponsmithing** | 5 | Crafting weapons (swords, bows, crossbows) |
+| **Armouring** | 5 | Crafting armor pieces |
+
+### Class Jobs (3-Tier) — *Can jump tiers with reduced success*
+These jobs use the standard tier-difference table. You can attempt to craft items above your tier, but you'll have a high fail chance.
+
+| Job | Max Tier | XP Source |
+|:---|:---:|:---|
+| **Carpentry** | 3 | Crafting wooden items |
+| **Masonry** | 3 | Crafting stone/brick items, using stonecutter |
+| **Beekeeping** | 3 | Harvesting honey/honeycomb from beehives |
+
+### Gathering (5-Tier)
+| Job | Max Tier | XP Source |
+|:---|:---:|:---|
+| **Forestry** | 5 | Breaking logs and wood |
+| **Mining** | 5 | Breaking stone, ores, deepslate |
+| **Digging** | 5 | Breaking dirt, sand, gravel, clay |
+| **Farming** | 5 | Harvesting mature crops |
+
+### Combat (5-Tier)
+| Job | Max Tier | XP Source |
+|:---|:---:|:---|
+| **Melee Combat** | 5 | Dealing damage with swords |
+| **Ranged Combat** | 5 | Dealing damage with bows/crossbows |
+
+### Other
+| Job | Max Tier | XP Source |
+|:---|:---:|:---|
+| **Fishing** | 3 | Catching fish with a fishing rod |
 
 ### Default Time Requirements
-By default, the time required to reach the next tier scales heavily:
-- **Tier 0 to Tier 1:** 60 minutes (1 hour) of active use
-- **Tier 1 to Tier 2:** 120 minutes (2 hours)
-- **Tier 2 to Tier 3:** 240 minutes (4 hours)
-- **Tier 3 to Tier 4:** 480 minutes (8 hours)
-- **Tier 4 to Tier 5 (Mastered):** 960 minutes (16 hours)
 
-*(Admins can change these base values globally, or apply a universal multiplier in the config).*
+**Material Jobs & Gathering (5-Tier):**
+
+| Tier | Minutes | Real Time |
+|:---|:---:|:---|
+| Tier 0 → 1 | 60 | 1 hour |
+| Tier 1 → 2 | 120 | 2 hours |
+| Tier 2 → 3 | 240 | 4 hours |
+| Tier 3 → 4 | 480 | 8 hours |
+| Tier 4 → 5 | 960 | 16 hours |
+
+**Class Jobs & Fishing (3-Tier):**
+
+| Tier | Minutes | Real Time |
+|:---|:---:|:---|
+| Tier 0 → 1 | 60 | 1 hour |
+| Tier 1 → 2 | 120 | 2 hours |
+| Tier 2 → 3 | 240 | 4 hours |
+
+All times are multiplied by the global `minutesMultiplier` config value (default `1.0`).
 
 ---
 
@@ -38,131 +112,356 @@ By default, the time required to reach the next tier scales heavily:
 
 At low knowledge tiers, players will struggle to gather basic resources.
 
-### Gathering Failure
 When breaking a block associated with a gathering skill (e.g., Logs for Forestry, Stone/Ores for Mining, Dirt/Sand for Digging, Mature Crops for Farming), there is a chance the block will break but **drop nothing**.
 
 **Default Fail Chances:**
-| Tier | Forestry, Mining, Digging | Farming |
-| :--- | :--- | :--- |
-| **Tier 0** | 40% fail | 30% fail |
-| **Tier 1** | 25% fail | 20% fail |
-| **Tier 2** | 10% fail | 10% fail |
-| **Tier 3** | 5% fail | 5% fail |
-| **Tier 4 & 5** | 2% fail | 2% fail |
 
-*(Note: For Farming, only fully mature crops yield XP and are subjected to the fail chance. Breaking seeds or un-grown crops does nothing).*
+| Tier | Forestry, Mining, Digging | Farming |
+|:---|:---:|:---:|
+| Tier 0 | 40% | 30% |
+| Tier 1 | 25% | 20% |
+| Tier 2 | 10% | 10% |
+| Tier 3 | 5% | 5% |
+| Tier 4+ | 2% | 2% |
+
+> **Note:** For Farming, only fully mature crops yield XP and are subject to the fail chance. Breaking seeds or un-grown crops does nothing.
+
+**Tool Tier Progression:** To gain XP, you must use the correct tool tier for your current knowledge tier. For example, to progress from Mining Tier 1 to Tier 2, you must use a stone pickaxe.
 
 ---
 
-## 🛠️ Crafting Mechanics (Tier-Difference System)
+## 🛠️ Crafting Mechanics (Material Jobs)
 
-Crafting gear is no longer guaranteed. Success depends strictly on the difference between the **Player's Knowledge Tier** and the **Item's Required Tier**.
+**Material jobs (Toolsmithing, Weaponsmithing, Armouring) cannot jump tiers.** If you attempt to craft an item whose tier is higher than your knowledge tier, the craft **always fails** and ingredients are lost. You'll see the message: *"You don't have enough [Knowledge] knowledge to work with these materials."*
+
+When crafting at or below your tier, success depends on the **tier difference**:
 
 `Difference = (Player Tier) - (Item Tier)`
 
-### Crafting Results:
-- **Fail:** The item is destroyed during crafting. Ingredients are lost forever.
-- **Poor Quality:** The item is crafted, but it only has **10% of its maximum durability**.
+### Crafting Results
+- **Fail:** The item is destroyed. Ingredients are lost forever.
+- **Poor Quality:** The item is crafted with only **10% of max durability**.
 - **Normal:** The item is crafted perfectly.
 
-**Default Tier-Difference Crafting Chances:**
-| Tier Difference | Fail Chance | Poor Chance | Normal Chance | Example |
-| :--- | :--- | :--- | :--- | :--- |
-| **≤ -3** (Impossible) | **100%** | 0% | 0% | Tier 0 crafting Netherite (Tier 4) |
-| **-2** (Very Risky) | **85%** | 12% | 3% | Tier 1 crafting Diamond (Tier 3) |
-| **-1** (Challenging) | **45%** | 35% | 20% | Tier 2 crafting Diamond (Tier 3) |
-| **0** (At your level) | **10%** | 15% | **75%** | Tier 3 crafting Diamond (Tier 3) |
-| **+1** (Below skill) | **0%** | 8% | **92%** | Tier 4 crafting Diamond (Tier 3) |
-| **≥ +2** (Trivial) | **0%** | 0% | **100%** | Tier 5 crafting Diamond (Tier 3) |
+**Default Tier-Difference Chances:**
 
-### Default Vanilla Item Tiers
-- **Tier 0:** Wooden Tools, Wooden Sword, Leather Armor
-- **Tier 1:** Stone Tools, Stone/Gold Swords, Bow, Chainmail/Gold Armor
-- **Tier 2:** Iron Tools, Iron Sword, Crossbow, Iron Armor, Turtle Helmet
-- **Tier 3:** Diamond Tools, Diamond Sword, Diamond Armor
-- **Tier 4:** Netherite Tools, Netherite Sword, Netherite Armor
+| Diff | Fail | Poor | Normal | Example |
+|:---|:---:|:---:|:---:|:---|
+| ≤ −3 | 100% | 0% | 0% | T0 player → Netherite (T4) |
+| −2 | 85% | 12% | 3% | T1 → Diamond (T3) |
+| −1 | 45% | 35% | 20% | T2 → Diamond (T3) |
+| 0 | 10% | 15% | 75% | T3 → Diamond (T3) |
+| +1 | 0% | 8% | 92% | T4 → Diamond (T3) |
+| ≥ +2 | 0% | 0% | 100% | T5 → Diamond (T3) |
 
-*(Note: Modded items or custom overrides can be assigned to any tier via the config).*
+### Default Vanilla Item Tiers (Material Jobs)
+
+| Tier | Tools | Weapons | Armor |
+|:---|:---|:---|:---|
+| **0** | Wooden | Wooden Sword | Leather |
+| **1** | Stone | Stone/Gold Sword, Bow | Chainmail, Gold |
+| **2** | Iron | Iron Sword, Crossbow | Iron, Turtle Helmet |
+| **3** | Diamond | Diamond Sword | Diamond |
+| **4** | Netherite | Netherite Sword | Netherite |
+
+---
+
+## 🪵 Crafting Mechanics (Class Jobs)
+
+**Class jobs (Carpentry, Masonry) can jump tiers** using the same tier-difference table above. This means a Tier 0 Carpenter can attempt to craft a Tier 2 item, but will have an 85% fail chance.
+
+---
+
+## 🪚 Carpentry
+
+Carpentry covers all wooden craftable items. Items are assigned to tiers based on complexity:
+
+| Tier | Items |
+|:---|:---|
+| **0** | All planks, sticks, torches |
+| **1** | Banners, bookshelves, bowls, buttons, campfires, doors, trapdoors, fences, levers, stairs, slabs, trapped chests |
+| **2** | Bamboo mosaic, beds, beehives, chiseled bookshelves, crafting tables, cartography/fletching tables, fence gates, signs, hanging signs, pressure plates, paintings, item frames, full wood blocks |
+| **3** | Chests, barrels, armor stands, composters, jukeboxes, lecterns, looms, scaffolding, note blocks, ladders |
+
+### Bamboo +1 Tier Rule
+All bamboo variants are **+1 tier** compared to their normal wood equivalent. For example, a normal oak door is Tier 1 but a bamboo door is Tier 2.
+
+---
+
+## 🧱 Masonry
+
+Masonry covers all stone, brick, and mineral crafting:
+
+| Tier | Items |
+|:---|:---|
+| **1** | Stone stairs/slabs/buttons/pressure plates, levers, furnaces, smokers, concrete (all colors) |
+| **2** | Bricks (all types), blast furnaces, flower pots, decorated pots, glass (all types), glass panes, tinted glass, glowstone, stonecutters |
+| **3** | Dispensers, droppers, observers, pistons, sticky pistons |
+
+### Shared Items
+The **lever** is registered in both Carpentry (Tier 1) and Masonry (Tier 1). Crafting one grants XP for whichever knowledge has a rule registered (Masonry takes priority since it's registered second).
+
+---
+
+## 🐝 Beekeeping
+
+Beekeeping governs interactions with beehives and bee nests.
+
+### Honey/Honeycomb Harvesting
+When using a **glass bottle** (honey) or **shears** (honeycomb) on a full beehive, the beekeeping system activates:
+
+**Harvest Fail Chance (angers bees even with campfire):**
+
+| Tier | Fail Chance |
+|:---|:---:|
+| Tier 0 | 50% |
+| Tier 1 | 30% |
+| Tier 2 | 10% |
+| Tier 3+ | 0% |
+
+On failure, bees become angry regardless of whether a campfire is underneath. XP is still granted on failure.
+
+### Better Honey
+When harvesting with a glass bottle, there is a chance to receive **"Royal Honey"** — a honey bottle with custom potion effects:
+
+| Tier | Better Honey Chance |
+|:---|:---:|
+| Tier 1 | 10% |
+| Tier 2 | 25% |
+| Tier 3 | 25% |
+
+**Default Royal Honey effects:**
+- Regeneration II (10 seconds)
+- Saturation I (5 seconds)
+
+All effects, the item name, and color are fully configurable in `knowledgebound.json`.
+
+### Silk Touch Beehive Moving
+Moving beehives with Silk Touch requires **Beekeeping Tier 3** (configurable via `silkTouchBeehiveMinTier`). Lower-tier players attempting to break a beehive with Silk Touch will be blocked.
+
+---
+
+## 🪨 Stonecutter
+
+The stonecutter is tied to the **Masonry** knowledge:
+
+- **Requires Masonry Tier 1** to use at all.
+- **Cutting damage chance:** At Tier 1, there's a 10% chance to take 1 heart of damage when using the stonecutter. This decreases by 5% per tier:
+  - Tier 1: 10%
+  - Tier 2: 5%
+  - Tier 3: 0%
+- Grants **Masonry XP** on each use.
 
 ---
 
 ## ⚔️ Combat & Armor Mechanics
 
 ### Combat Damage Scaling
-You do not deal full damage until you master combat. This applies to both **Melee Combat** and **Ranged Combat**.
+Players deal reduced damage until they level up their combat knowledge.
 
 **Default Damage Multipliers:**
+
 | Combat Tier | Damage Output |
-| :--- | :--- |
-| **Tier 0** | 40% (0.4x) |
-| **Tier 1** | 55% (0.55x) |
-| **Tier 2** | 70% (0.70x) |
-| **Tier 3** | 85% (0.85x) |
-| **Tier 4 & 5** | 100% (1.0x) |
+|:---|:---:|
+| Tier 0 | 40% |
+| Tier 1 | 55% |
+| Tier 2 | 70% |
+| Tier 3 | 85% |
+| Tier 4+ | 100% |
+
+**Melee Combat** XP is gained by dealing damage with swords. **Ranged Combat** XP is gained by dealing projectile damage. Both require hitting a target and dealing > 0 damage.
 
 ### Armor Equip Restrictions
-You cannot equip high-tier armor if you don't know how to move in combat. Armor equipping is locked behind your **Combat Knowledge** (the *highest* of your Melee or Ranged tier). 
+Armor is locked behind your **highest combat tier** (the greater of Melee or Ranged).
 
 **Default Armor Requirements:**
-- **Tier 0:** Leather
-- **Tier 1:** Chainmail
-- **Tier 2:** Iron
-- **Tier 3:** Gold
-- **Tier 4:** Diamond
-- **Tier 5:** Netherite
 
-If a player attempts to equip armor they don't have the tier for, it will automatically drop off them.
+| Combat Tier | Armor Allowed |
+|:---|:---|
+| 0 | Leather |
+| 1 | Chainmail |
+| 2 | Iron |
+| 3 | Gold |
+| 4 | Diamond |
+| 5 | Netherite |
 
----
-
-## 🎣 Fishing Mechanics
-Fishing has a simplified progression with only 3 Tiers.
-- **Tier 1:** 60 minutes
-- **Tier 2:** 120 minutes
-- **Tier 3:** 240 minutes
-
-*(Higher tiers could theoretically unlock better loot tables via datapacks, though currently it operates as a standard tracker).*
+If a player equips armor they don't have the tier for, it automatically drops off them.
 
 ---
 
-## ⚙️ Configuration File (`knowledgebound.json`)
+## 🎣 Fishing
 
-The mod generates a `knowledgebound.json` file in your server's `config/` directory. It is highly detailed and commented.
+Fishing has a simplified 3-tier progression:
 
-### Global Tuning
-- `baseMinutesPerTier`: Array of minutes `[60, 120, 240, 480, 960]`. Change these to alter the base grind.
-- `minutesMultiplier`: A global scaler. Set to `0.5` for a 2x faster server, or `2.0` to double the grind.
+| Tier | Minutes Required |
+|:---|:---:|
+| Tier 0 → 1 | 60 min |
+| Tier 1 → 2 | 120 min |
+| Tier 2 → 3 | 240 min |
 
-### Customizing Modded Items & Overrides
-You can seamlessly integrate modded blocks and items into KnowledgeBound using the config arrays:
-- **Gathering Extensions:** Add block IDs (e.g., `"biomesoplenty:fir_log"`) to `extraForestryBlocks`, `extraMiningBlocks`, etc., to allow them to grant XP and be subject to fail chances.
-- **Crafting Extensions:** Add item IDs to `extraToolItems`, `extraWeaponItems`, or `extraArmorItems`.
-- **Item Tier Overrides:** Use `itemCraftingTierOverrides` to specify exactly what crafting tier an item belongs to. (e.g., `"mythicmetals:adamantium_sword": 5`).
-- **Armor Equip Overrides:** Use `extraItemTiers` under the `armorTiers` section to define what combat tier is required to wear a specific modded helmet/chestplate.
+---
 
-*Tip: You can hot-reload config changes in-game at any time using `/kb reload`.*
+## 🔒 Proficiency Limits
+
+Players cannot master everything. Proficiency limits cap how many jobs a player can max out:
+
+| Limit | Default | Description |
+|:---|:---:|:---|
+| `maxMasterMaterial` | 1 | Max Material jobs (5-tier) at Tier 5 |
+| `maxTier4Material` | 3 | Max Material jobs at Tier 4 or higher |
+| `maxMasterClass` | 1 | Max Class jobs (3-tier) at Tier 3 |
+
+When a player hits a proficiency limit, they see: *"You've reached your proficiency limit for [Knowledge]. You cannot advance further."*
+
+Set any limit to `-1` to disable it.
+
+---
+
+## 🚫 Blocked Items
+
+Some items are completely blocked from crafting. Attempting to craft them will consume ingredients and yield nothing.
+
+**Default blocked items:** All boats and chest boats (oak, spruce, birch, jungle, acacia, dark oak, mangrove, cherry, bamboo raft, and all chest variants).
+
+Additional items can be blocked via the `blockedCraftingItems` config array.
+
+---
+
+## 🖥️ Client-Side HUD
+
+If the mod is installed on the client, pressing **K** (default, rebindable) toggles a Knowledge HUD overlay in the top-left corner showing:
+
+- All 13 knowledge categories
+- Current tier and max tier (e.g., `T3/5`)
+- Progress bar toward the next tier
+- Minutes remaining (e.g., `45/120m`)
+- Blue bar for maxed-out knowledges
+
+The HUD syncs automatically with the server on join, respawn, and every XP tick.
+
+---
+
+## ⚙️ Full Configuration Reference
+
+The mod generates `knowledgebound.json` in your server's `config/` directory. All values can be hot-reloaded with `/kb reload`.
+
+### Global XP Tuning
+
+| Key | Default | Description |
+|:---|:---|:---|
+| `baseMinutesPerTier` | `[60, 120, 240, 480, 960]` | Minutes per tier for 5-tier jobs (index 0 = T1) |
+| `classJobBaseMinutes` | `[60, 120, 240]` | Minutes per tier for 3-tier class jobs |
+| `fishingBaseMinutes` | `[60, 120, 240]` | Minutes per tier for fishing |
+| `minutesMultiplier` | `1.0` | Global multiplier. `0.5` = 2× faster, `2.0` = 2× slower |
+
+### Proficiency Limits
+
+| Key | Default | Description |
+|:---|:---|:---|
+| `maxMasterMaterial` | `1` | Max material jobs at max tier. `-1` = disabled |
+| `maxTier4Material` | `3` | Max material jobs at T4+. `-1` = disabled |
+| `maxMasterClass` | `1` | Max class jobs at max tier. `-1` = disabled |
+
+### Combat Damage Scaling
+
+| Key | Default | Description |
+|:---|:---|:---|
+| `combatDamageScale` | `[0.40, 0.55, 0.70, 0.85, 1.0, 1.0]` | Damage multiplier per combat tier (index 0 = T0) |
+
+### Gathering Fail Chances
+
+Each gathering skill has its own `GatherFailConfig` with `tier0` through `tier4` values:
+
+| Key | T0 | T1 | T2 | T3 | T4 |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| `forestryGatherFail` | 0.40 | 0.25 | 0.10 | 0.05 | 0.02 |
+| `miningGatherFail` | 0.40 | 0.25 | 0.10 | 0.05 | 0.02 |
+| `diggingGatherFail` | 0.40 | 0.25 | 0.10 | 0.05 | 0.02 |
+| `farmingGatherFail` | 0.30 | 0.20 | 0.10 | 0.05 | 0.02 |
+
+### Crafting Tier-Difference Chances
+
+`craftingDiffChances` is an array of 6 entries (diff ≤ −3 through diff ≥ +2). Each entry has `failChance`, `poorChance`, `normalChance`. Values auto-normalize if they don't sum to 1.0.
+
+| Index | Diff | Fail | Poor | Normal |
+|:---:|:---:|:---:|:---:|:---:|
+| 0 | ≤ −3 | 1.00 | 0.00 | 0.00 |
+| 1 | −2 | 0.85 | 0.12 | 0.03 |
+| 2 | −1 | 0.45 | 0.35 | 0.20 |
+| 3 | 0 | 0.10 | 0.15 | 0.75 |
+| 4 | +1 | 0.00 | 0.08 | 0.92 |
+| 5 | ≥ +2 | 0.00 | 0.00 | 1.00 |
+
+### Stonecutter Settings
+
+| Key | Default | Description |
+|:---|:---|:---|
+| `stonecutterCutChanceTier1` | `0.10` | Chance to take damage at Masonry T1 |
+| `stonecutterCutReductionPerTier` | `0.05` | Reduction per tier above 1 |
+
+### Beekeeping Settings
+
+| Key | Default | Description |
+|:---|:---|:---|
+| `beekeepingHarvestFail` | `{0.50, 0.30, 0.10, 0.0, 0.0}` | Harvest fail chance per tier |
+| `betterHoneyChance` | `[0.0, 0.10, 0.25]` | Better honey chance per tier (T1-T3) |
+| `silkTouchBeehiveMinTier` | `3` | Min beekeeping tier to Silk Touch beehives |
+
+### Better Honey Config
+
+| Key | Default | Description |
+|:---|:---|:---|
+| `betterHoney.itemId` | `"minecraft:honey_bottle"` | Base item for better honey |
+| `betterHoney.customName` | `"Royal Honey"` | Display name |
+| `betterHoney.nameColor` | `"gold"` | Minecraft formatting color name |
+| `betterHoney.effects` | Regen II 10s, Saturation I 5s | Array of `{effectId, durationTicks, amplifier}` |
+
+### Extra Item Lists
+
+| Key | Description |
+|:---|:---|
+| `extraToolItems` | Item IDs to add to the Toolsmithing rule |
+| `extraArmorItems` | Item IDs to add to the Armouring rule |
+| `extraWeaponItems` | Item IDs to add to the Weaponsmithing rule |
+| `extraCarpentryItems` | Item IDs to add to the Carpentry rule |
+| `extraMasonryItems` | Item IDs to add to the Masonry rule |
+| `blockedCraftingItems` | Item IDs to completely block from crafting |
+| `itemCraftingTierOverrides` | Map of `"item_id": tier` to override any item's required tier |
+
+### Gathering Block Extensions
+
+| Key | Description |
+|:---|:---|
+| `extraForestryBlocks` | Block IDs to add to Forestry gathering |
+| `extraMiningBlocks` | Block IDs to add to Mining gathering |
+| `extraDiggingBlocks` | Block IDs to add to Digging gathering |
+| `extraFarmingBlocks` | Block IDs to add to Farming gathering |
+
+### Armor Tier Requirements
+
+The `armorTiers` section lets you customize which combat tier is needed to equip each armor type, and add modded armor via `extraItemTiers`.
 
 ---
 
 ## 📜 Admin Commands
 
-Admins with OP permissions (Level 2+) can manage player knowledge using the `/kb` command. Knowledge category names fully support auto-completion.
+Admins with OP permissions (Level 2+) can manage player knowledge using the `/kb` command. All knowledge names support tab auto-completion.
 
-- `/kb help` - Displays a list of all commands.
-- `/kb check <player> [knowledge]` - View a player's current tier and progress (minutes) for all categories or a specific one.
-- `/kb set <player> <knowledge> <tier>` - Forcibly set a player's knowledge to a specific tier (0-5).
-- `/kb reset <player> <knowledge>` - Completely reset a player's knowledge in a category back to 0.
-- `/kb reload` - Hot-reload the `knowledgebound.json` config file without restarting the server.
+| Command | Description |
+|:---|:---|
+| `/kb help` | List all available commands |
+| `/kb check <player> [knowledge]` | View a player's tier and progress |
+| `/kb set <player> <knowledge> <tier>` | Force-set a player's knowledge tier |
+| `/kb reset <player> <knowledge>` | Reset a knowledge back to Tier 0 |
+| `/kb reload` | Hot-reload `knowledgebound.json` without restart |
 
 ---
 
-## 🏆 Datapack Compatibility (Custom Achievements)
+## 🏆 Datapack Compatibility
 
-If you are a server admin creating custom datapacks (like custom Advancements), you can easily detect and trigger events based on a player's knowledge tier!
+KnowledgeBound stores player data in their root NBT under `knowledgebound_knowledge` as an SNBT List. You can use this with standard datapack conditions.
 
-KnowledgeBound stores player data directly in their root NBT under the `knowledgebound_knowledge` key as an SNBT List. You can check this using standard Minecraft datapack `minecraft:tick` triggers and the `entity_properties` condition.
-
-**Example: Trigger an advancement when a player hits Tier 5 Melee Combat:**
+**Example: Advancement when a player reaches Tier 5 Melee Combat:**
 ```json
 {
   "criteria": {
@@ -184,9 +483,46 @@ KnowledgeBound stores player data directly in their root NBT under the `knowledg
 }
 ```
 
+### Item Tags
+
+The mod registers custom item tags under `data/knowledgebound/tags/item/` for tool tier detection. These can be extended via datapacks to add modded items:
+
+| Tag | Contents |
+|:---|:---|
+| `knowledgebound:wooden_tools` | All wooden tools |
+| `knowledgebound:stone_tools` | All stone tools |
+| `knowledgebound:copper_tools` | Copper tools (currently empty, for modded) |
+| `knowledgebound:iron_tools` | All iron tools |
+| `knowledgebound:diamond_tools` | All diamond tools |
+| `knowledgebound:leather_armor` | All leather armor |
+| `knowledgebound:chainmail_armor` | All chainmail armor |
+| `knowledgebound:bows` | Bows |
+| `knowledgebound:crossbows` | Crossbows |
+| `knowledgebound:fishing_rods` | Fishing rods |
+| `knowledgebound:melee_weapons` | All swords |
+
 ---
 
 ## 🛑 Current Limitations
-Because KnowledgeBound operates entirely on the server-side to ensure vanilla clients can connect without downloads:
-- **No Custom UI:** We cannot add custom skill-tree menus, graphical overlays, or new keybinds. All feedback is provided via standard vanilla mechanics (Chat messages, Action bars, sounds).
-- **Hardcoded Categories:** The 10 existing knowledge categories are hardcoded into the Java logic. You cannot create an entirely new category (like "Sorcery") purely via the config file.
+
+- **No Custom UI (Server-Only):** Without the client mod installed, feedback is limited to chat messages, action bar text, and the XP bar. The XP bar is repurposed to show tier progress for whatever skill you're currently using.
+- **Hardcoded Categories:** The 13 knowledge categories are defined in Java code. You cannot create entirely new categories (like "Sorcery") via the config — but you can add items/blocks to existing categories.
+- **Enchantment Qualities:** "Excellent" and "Master" quality crafting with fixed enchantments is planned but not yet implemented.
+
+---
+
+## 👥 Credits
+
+- **Maxello** — Lead developer. Core mod architecture, all game mechanics (gathering, crafting, combat, armor restrictions), job category system (Material/Class/Gathering/Combat), Carpentry, Masonry, Beekeeping, Stonecutter, proficiency limits, boat blocking, configuration system, admin commands.
+- **nipatiitti** — Client-side Knowledge HUD overlay, server→client state synchronization (`KnowledgeSyncPayload`), item tag system for tool tier detection (`KnowledgeTags`), unit tests (`CraftingTierChancesTest`, `GatherFailConfigTest`), code cleanup and import reorganization.
+
+---
+
+## 📦 Installation
+
+1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 1.21.1
+2. Install [Fabric API](https://modrinth.com/mod/fabric-api)
+3. Drop `KnowledgeBound-x.x.x.jar` into your server's `mods/` folder
+4. (Optional) Also install on the client for the Knowledge HUD overlay
+5. Start the server — `knowledgebound.json` will generate in `config/`
+6. Tweak the config to your liking and use `/kb reload` to apply changes
