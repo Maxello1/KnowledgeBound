@@ -48,8 +48,10 @@ public abstract class BeehiveMixin {
         if (world.isClient()) return;
         if (!(player instanceof ServerPlayerEntity serverPlayer)) return;
 
-        // only intercept when using a glass bottle (honey harvesting)
-        if (!stack.isOf(Items.GLASS_BOTTLE)) return;
+        // intercept glass bottle (honey) and shears (honeycomb) interactions
+        boolean isBottle = stack.isOf(Items.GLASS_BOTTLE);
+        boolean isShears = stack.isOf(Items.SHEARS);
+        if (!isBottle && !isShears) return;
 
         // check if the beehive has honey
         int honeyLevel = state.get(BeehiveBlock.HONEY_LEVEL);
@@ -76,27 +78,27 @@ public abstract class BeehiveMixin {
             // grant xp even on failure (you're still learning)
             PlayerKnowledgeManager.grantMinuteIfAllowed(serverPlayer, KnowledgeRegistry.BEEKEEPING_ID);
 
-            // cancel the normal interaction - no honey
+            // cancel the normal interaction - no honey/honeycomb
             cir.setReturnValue(ActionResult.SUCCESS);
             return;
         }
 
-        // success - check for better honey
-        double betterChance = 0.0;
-        if (beekeepingTier > 0 && beekeepingTier <= cfg.betterHoneyChance.length) {
-            betterChance = cfg.betterHoneyChance[beekeepingTier - 1];
-        }
+        // better honey only applies to glass bottle harvests
+        if (isBottle) {
+            double betterChance = 0.0;
+            if (beekeepingTier > 0 && beekeepingTier <= cfg.betterHoneyChance.length) {
+                betterChance = cfg.betterHoneyChance[beekeepingTier - 1];
+            }
 
-        if (RANDOM.nextDouble() < betterChance) {
-            // give better honey instead - let vanilla handle the normal interaction
-            // but schedule giving the better honey on next tick
-            serverPlayer.server.execute(() -> giveBetterHoney(serverPlayer, cfg));
+            if (RANDOM.nextDouble() < betterChance) {
+                serverPlayer.server.execute(() -> giveBetterHoney(serverPlayer, cfg));
+            }
         }
 
         // grant beekeeping xp
         PlayerKnowledgeManager.grantMinuteIfAllowed(serverPlayer, KnowledgeRegistry.BEEKEEPING_ID);
 
-        // let vanilla handle the rest (give normal honey, reset honey level, etc.)
+        // let vanilla handle the rest (give normal honey/honeycomb, reset honey level, etc.)
     }
 
     private static void giveBetterHoney(ServerPlayerEntity player, KnowledgeBoundConfig cfg) {
