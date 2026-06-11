@@ -1,8 +1,9 @@
 package net.maxello.knowledgebound;
 
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -10,15 +11,13 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.CropBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
-
+import net.minecraft.item.ItemStack;
+import net.minecraft.registry.Registries;
 import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.world.World;
@@ -39,6 +38,14 @@ public class KnowledgeEvents {
         registerRangedCombatXp();
         registerMeleeCombatXp();
         registerRespawnRestore();
+        registerJoinSync();
+    }
+
+    private static void registerJoinSync() {
+        // Send full knowledge state to the client as soon as they join
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+                PlayerKnowledgeManager.sendFullSync(handler.getPlayer())
+        );
     }
 
     // ----------------------------------------------------------------------
@@ -47,12 +54,12 @@ public class KnowledgeEvents {
 
     private static void registerRespawnRestore() {
         ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
-            // move data to new body
             PlayerKnowledgeManager.copyData(oldPlayer, newPlayer);
 
-            // delay 1 tick, vanilla still loading player
+            // Delay 1 tick — vanilla is still loading the player entity
             newPlayer.server.execute(() -> {
                 PlayerKnowledgeManager.restoreXpBar(newPlayer);
+                PlayerKnowledgeManager.sendFullSync(newPlayer);
             });
         });
     }
@@ -476,19 +483,7 @@ public class KnowledgeEvents {
                 || path.equals("trident");
     }
     private static boolean isSwordItem(ItemStack stack) {
-        if (stack.isEmpty()) return false;
-        // Prefer the registry id path (e.g. "minecraft:iron_sword") instead of
-        // relying on Item.toString(), which may be implementation-specific.
-        try {
-            Identifier id = Registries.ITEM.getId(stack.getItem());
-            if (id != null) {
-                return id.getPath().endsWith("_sword");
-            }
-        } catch (Exception ignored) {
-            // Fall back to item.toString() if registry lookup fails for some reason.
-        }
-        String fallback = stack.getItem().toString();
-        return fallback.endsWith("_sword");
+        return !stack.isEmpty() && stack.isIn(KnowledgeTags.MELEE_WEAPONS);
     }
 
     private static boolean isArmorItem(String path) {
@@ -505,31 +500,20 @@ public class KnowledgeEvents {
 
     public static class ToolTierHelper {
         public static KnowledgeDefinition.ToolTier fromItem(ItemStack stack) {
-            if (stack.isEmpty()) {
-                return KnowledgeDefinition.ToolTier.FIST;
-            }
-            // Use registry id path (recommended) and fall back to toString() only
-            // if lookup fails. This is more robust for modded items.
-            String path;
-            try {
-                Identifier id = Registries.ITEM.getId(stack.getItem());
-                path = (id != null) ? id.getPath() : stack.getItem().toString();
-            } catch (Exception e) {
-                path = stack.getItem().toString();
-            }
+            if (stack.isEmpty()) return KnowledgeDefinition.ToolTier.FIST;
 
-            if (path.contains("wooden_"))  return KnowledgeDefinition.ToolTier.WOOD;
-            if (path.contains("stone_"))   return KnowledgeDefinition.ToolTier.STONE;
-            if (path.contains("copper_"))  return KnowledgeDefinition.ToolTier.COPPER;
-            if (path.contains("iron_"))    return KnowledgeDefinition.ToolTier.IRON;
-            if (path.contains("diamond_")) return KnowledgeDefinition.ToolTier.DIAMOND;
-            if (path.contains("leather_"))   return KnowledgeDefinition.ToolTier.LEATHER;
-            if (path.contains("chainmail_")) return KnowledgeDefinition.ToolTier.CHAINMAIL;
-            if (path.contains("crossbow"))   return KnowledgeDefinition.ToolTier.CROSSBOW;
-            if (path.contains("bow"))        return KnowledgeDefinition.ToolTier.BOW;
-            if (path.contains("fishing_rod")) return KnowledgeDefinition.ToolTier.FISHING_ROD;
+            if (stack.isIn(KnowledgeTags.WOODEN_TOOLS))   return KnowledgeDefinition.ToolTier.WOOD;
+            if (stack.isIn(KnowledgeTags.STONE_TOOLS))    return KnowledgeDefinition.ToolTier.STONE;
+            if (stack.isIn(KnowledgeTags.COPPER_TOOLS))   return KnowledgeDefinition.ToolTier.COPPER;
+            if (stack.isIn(KnowledgeTags.IRON_TOOLS))     return KnowledgeDefinition.ToolTier.IRON;
+            if (stack.isIn(KnowledgeTags.DIAMOND_TOOLS))  return KnowledgeDefinition.ToolTier.DIAMOND;
+            if (stack.isIn(KnowledgeTags.LEATHER_ARMOR))  return KnowledgeDefinition.ToolTier.LEATHER;
+            if (stack.isIn(KnowledgeTags.CHAINMAIL_ARMOR)) return KnowledgeDefinition.ToolTier.CHAINMAIL;
+            if (stack.isIn(KnowledgeTags.CROSSBOWS))      return KnowledgeDefinition.ToolTier.CROSSBOW;
+            if (stack.isIn(KnowledgeTags.BOWS))           return KnowledgeDefinition.ToolTier.BOW;
+            if (stack.isIn(KnowledgeTags.FISHING_RODS))   return KnowledgeDefinition.ToolTier.FISHING_ROD;
 
             return KnowledgeDefinition.ToolTier.UNKNOWN;
-         }
-     }
+        }
+    }
 }

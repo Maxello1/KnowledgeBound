@@ -14,11 +14,15 @@ import net.minecraft.util.Identifier;
 
 public final class ArmorRestrictionHandler {
 
+    private static int tickCounter = 0;
+
     private ArmorRestrictionHandler() {
     }
 
     public static void init() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
+            if (++tickCounter < 20) return;
+            tickCounter = 0;
             for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
                 checkPlayerArmor(player);
             }
