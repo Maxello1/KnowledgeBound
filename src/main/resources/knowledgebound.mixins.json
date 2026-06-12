@@ -12,6 +12,7 @@
         "ExperienceOrbEntityMixin",
         "PlayerEntityMixin",
         "DamageScalingMixin",
+        "ScreenHandlerMixin",
         "StonecutterScreenHandlerMixin",
         "BeehiveMixin"
 	],

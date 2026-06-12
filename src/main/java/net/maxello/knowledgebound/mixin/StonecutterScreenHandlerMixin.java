@@ -2,9 +2,11 @@ package net.maxello.knowledgebound.mixin;
 
 import net.maxello.knowledgebound.*;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.StonecutterScreenHandler;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -13,18 +15,15 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.Random;
-
 /**
  * Hooks into the stonecutter to:
- * 1. Require masonry tier 1+ to use it
- * 2. Apply a cutting damage chance (starts at 10%, decreases per tier)
- * 3. Grant masonry XP
+ * 1. Require masonry tier 1+ to use it (on recipe selection)
+ * 2. Apply fail chance + cutting damage + XP on shift-click output (quickMove)
+ *
+ * Normal click output handling is done in ScreenHandlerMixin.
  */
 @Mixin(StonecutterScreenHandler.class)
 public abstract class StonecutterScreenHandlerMixin extends ScreenHandler {
-
-    private static final Random RANDOM = new Random();
 
     protected StonecutterScreenHandlerMixin(ScreenHandlerType<?> type, int syncId) {
         super(type, syncId);
@@ -32,7 +31,7 @@ public abstract class StonecutterScreenHandlerMixin extends ScreenHandler {
 
     /**
      * onButtonClick is called when the player selects a recipe in the stonecutter.
-     * We intercept to check masonry tier and apply cutting effects.
+     * We only use this to gate recipe selection behind masonry tier 1.
      */
     @Inject(method = "onButtonClick", at = @At("HEAD"), cancellable = true)
     private void knowledgebound$onButtonClick(PlayerEntity player, int id, CallbackInfoReturnable<Boolean> cir) {
@@ -40,32 +39,35 @@ public abstract class StonecutterScreenHandlerMixin extends ScreenHandler {
 
         int masonryTier = PlayerKnowledgeManager.getTier(serverPlayer, KnowledgeRegistry.MASONRY_ID);
 
-        // require masonry tier 1 to use stonecutter at all
-        if (masonryTier < 1) {
+        int minTier = KnowledgeBoundConfig.INSTANCE.stonecutterMinTier;
+
+        // require masonry tier to use stonecutter at all
+        if (masonryTier < minTier) {
             serverPlayer.sendMessage(
-                    Text.literal("You need Masonry Tier 1 to use the stonecutter.")
+                    Text.literal("You need Masonry Tier " + minTier + " to use the stonecutter.")
                             .formatted(Formatting.RED),
                     true
             );
             cir.setReturnValue(false);
-            return;
         }
+    }
 
-        // apply cutting damage chance
-        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
-        double cutChance = cfg.stonecutterCutChanceTier1 - ((masonryTier - 1) * cfg.stonecutterCutReductionPerTier);
-        cutChance = Math.max(0.0, cutChance);
+    /**
+     * quickMove IS overridden by StonecutterScreenHandler so we can @Inject here.
+     * This handles shift-click on the output slot (index 1).
+     */
+    @Inject(method = "quickMove", at = @At("HEAD"), cancellable = true)
+    private void knowledgebound$quickMove(PlayerEntity player, int slotIndex, CallbackInfoReturnable<ItemStack> cir) {
+        if (!(player instanceof ServerPlayerEntity serverPlayer)) return;
+        if (slotIndex != 1) return;
 
-        if (RANDOM.nextDouble() < cutChance) {
-            serverPlayer.damage(serverPlayer.getDamageSources().generic(), 2.0f);
-            serverPlayer.sendMessage(
-                    Text.literal("You cut yourself on the stonecutter!")
-                            .formatted(Formatting.RED),
-                    true
-            );
+        Slot outputSlot = this.slots.get(1);
+        if (!outputSlot.hasStack() || outputSlot.getStack().isEmpty()) return;
+
+        if (KnowledgeEvents.handleStonecutterOutput(serverPlayer, this)) {
+            // craft failed — return EMPTY to stop the quickMove loop
+            cir.setReturnValue(ItemStack.EMPTY);
         }
-
-        // grant masonry xp
-        PlayerKnowledgeManager.grantMinuteIfAllowed(serverPlayer, KnowledgeRegistry.MASONRY_ID);
+        // on success, let vanilla handle the actual transfer
     }
 }

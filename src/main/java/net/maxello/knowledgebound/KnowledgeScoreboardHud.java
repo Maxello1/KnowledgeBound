@@ -115,8 +115,11 @@ public final class KnowledgeScoreboardHud {
             scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.SIDEBAR, null);
         }
 
-        // clean up our scores
-        cleanupScores(scoreboard);
+        // fully remove our objective (don't recreate — that's only for updateScoreboard)
+        ScoreboardObjective obj = scoreboard.getNullableObjective(OBJECTIVE_NAME);
+        if (obj != null) {
+            scoreboard.removeObjective(obj);
+        }
     }
 
     /**
@@ -133,6 +136,9 @@ public final class KnowledgeScoreboardHud {
         // re-fetch after cleanup (cleanupScores removes and recreates it)
         ScoreboardObjective obj = scoreboard.getNullableObjective(OBJECTIVE_NAME);
         if (obj == null) return;
+
+        // ensure sidebar displays our objective after cleanup
+        scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.SIDEBAR, obj);
 
         // populate rows - higher score = higher on sidebar
         int score = ORDER.size();
@@ -203,10 +209,6 @@ public final class KnowledgeScoreboardHud {
                 true,
                 null
         );
-        ScoreboardObjective newObj = scoreboard.getNullableObjective(OBJECTIVE_NAME);
-        if (newObj != null) {
-            scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.SIDEBAR, newObj);
-        }
     }
 
     private static String formatName(String fullId) {

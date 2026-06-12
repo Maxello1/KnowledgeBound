@@ -4,18 +4,13 @@ import net.maxello.knowledgebound.*;
 import net.minecraft.block.BeehiveBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BeehiveBlockEntity;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.PotionContentsComponent;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
+import net.minecraft.util.ItemActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
@@ -44,7 +39,7 @@ public abstract class BeehiveMixin {
     private void knowledgebound$onUse(ItemStack stack, BlockState state, World world,
                                       BlockPos pos, PlayerEntity player, Hand hand,
                                       BlockHitResult hit,
-                                      CallbackInfoReturnable<ActionResult> cir) {
+                                      CallbackInfoReturnable<ItemActionResult> cir) {
         if (world.isClient()) return;
         if (!(player instanceof ServerPlayerEntity serverPlayer)) return;
 
@@ -91,7 +86,7 @@ public abstract class BeehiveMixin {
             PlayerKnowledgeManager.grantMinuteIfAllowed(serverPlayer, KnowledgeRegistry.BEEKEEPING_ID);
 
             // cancel the normal interaction - no honey/honeycomb
-            cir.setReturnValue(ActionResult.SUCCESS);
+            cir.setReturnValue(ItemActionResult.SUCCESS);
             return;
         }
 
@@ -114,53 +109,17 @@ public abstract class BeehiveMixin {
     }
 
     private static void giveBetterHoney(ServerPlayerEntity player, KnowledgeBoundConfig cfg) {
-        KnowledgeBoundConfig.BetterHoneyConfig honeyConfig = cfg.betterHoney;
+        ItemStack betterHoney = CustomItemRegistry.createRoyalHoney();
 
-        try {
-            Identifier itemId = Identifier.of(honeyConfig.itemId);
-            ItemStack betterHoney = new ItemStack(Registries.ITEM.get(itemId));
-
-            // custom name with color
-            Formatting color = Formatting.byName(honeyConfig.nameColor);
-            if (color == null) color = Formatting.GOLD;
-            betterHoney.set(DataComponentTypes.CUSTOM_NAME,
-                    Text.literal(honeyConfig.customName).formatted(color));
-
-            // apply potion effects via components
-            List<StatusEffectInstance> effects = new ArrayList<>();
-            for (KnowledgeBoundConfig.PotionEffectEntry entry : honeyConfig.effects) {
-                Identifier effectId = Identifier.of(entry.effectId);
-                Optional<RegistryEntry.Reference<StatusEffect>> effectEntry =
-                        Registries.STATUS_EFFECT.getEntry(effectId);
-                if (effectEntry.isPresent()) {
-                    effects.add(new StatusEffectInstance(
-                            effectEntry.get(),
-                            entry.durationTicks,
-                            entry.amplifier
-                    ));
-                }
-            }
-
-            if (!effects.isEmpty()) {
-                // set potion contents on the item
-                PotionContentsComponent potionContents = new PotionContentsComponent(
-                        Optional.empty(), Optional.empty(), effects
-                );
-                betterHoney.set(DataComponentTypes.POTION_CONTENTS, potionContents);
-            }
-
-            // try to put it in inventory, or drop it
-            if (!player.getInventory().insertStack(betterHoney)) {
-                player.dropItem(betterHoney, false);
-            }
-
-            player.sendMessage(
-                    Text.literal("You harvested some " + honeyConfig.customName + "!")
-                            .formatted(Formatting.GOLD),
-                    true
-            );
-        } catch (Exception e) {
-            KnowledgeBound.LOGGER.warn("[KnowledgeBound] Failed to create better honey item", e);
+        // try to put it in inventory, or drop it
+        if (!player.getInventory().insertStack(betterHoney)) {
+            player.dropItem(betterHoney, false);
         }
+
+        player.sendMessage(
+                Text.literal("You harvested some " + cfg.betterHoney.customName + "!")
+                        .formatted(Formatting.GOLD),
+                true
+        );
     }
 }

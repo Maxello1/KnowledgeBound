@@ -702,25 +702,27 @@ public class CraftingRuleRegistry {
     // --------------------------------------------------
 
     private static void registerBlockedItems() {
-        // all boats are blocked
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "oak_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "spruce_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "birch_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "jungle_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "acacia_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "dark_oak_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "mangrove_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "cherry_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "bamboo_raft"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "oak_chest_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "spruce_chest_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "birch_chest_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "jungle_chest_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "acacia_chest_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "dark_oak_chest_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "mangrove_chest_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "cherry_chest_boat"));
-        BLOCKED_ITEMS.add(Identifier.of("minecraft", "bamboo_chest_raft"));
+        // block all boats if enabled in config (default: true)
+        if (KnowledgeBoundConfig.INSTANCE.blockBoats) {
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "oak_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "spruce_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "birch_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "jungle_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "acacia_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "dark_oak_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "mangrove_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "cherry_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "bamboo_raft"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "oak_chest_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "spruce_chest_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "birch_chest_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "jungle_chest_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "acacia_chest_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "dark_oak_chest_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "mangrove_chest_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "cherry_chest_boat"));
+            BLOCKED_ITEMS.add(Identifier.of("minecraft", "bamboo_chest_raft"));
+        }
 
         // extra blocked items from config
         for (String idStr : KnowledgeBoundConfig.INSTANCE.blockedCraftingItems) {

@@ -8,6 +8,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -26,6 +27,15 @@ public final class KnowledgeCommands {
             (ctx, builder) -> {
                 for (KnowledgeDefinition def : KnowledgeRegistry.all()) {
                     builder.suggest(def.getId().getPath());
+                }
+                return builder.buildFuture();
+            };
+
+    /** Suggests all custom item IDs (e.g. "royal_honey"). */
+    private static final SuggestionProvider<ServerCommandSource> CUSTOM_ITEM_SUGGESTIONS =
+            (ctx, builder) -> {
+                for (String id : CustomItemRegistry.allIds()) {
+                    builder.suggest(id);
                 }
                 return builder.buildFuture();
             };
@@ -82,6 +92,30 @@ public final class KnowledgeCommands {
                             // /kb hud — toggle sidebar (any player)
                             .then(CommandManager.literal("hud")
                                     .executes(KnowledgeCommands::executeHud))
+
+                            // /kb gui — open knowledge chest GUI
+                            .then(CommandManager.literal("gui")
+                                    .executes(KnowledgeCommands::executeGui))
+
+                            // /kb list — list all registered knowledges
+                            .then(CommandManager.literal("list")
+                                    .executes(KnowledgeCommands::executeList))
+
+                            // /kb grant <player> <knowledge> <minutes>
+                            .then(CommandManager.literal("grant")
+                                    .requires(src -> src.hasPermissionLevel(2))
+                                    .then(CommandManager.argument("player", EntityArgumentType.player())
+                                            .then(CommandManager.argument("knowledge", StringArgumentType.word())
+                                                    .suggests(KNOWLEDGE_SUGGESTIONS)
+                                                    .then(CommandManager.argument("minutes", IntegerArgumentType.integer(1, 10000))
+                                                            .executes(KnowledgeCommands::executeGrant)))))
+
+                            // /kb give <item> — give a custom KB item to yourself
+                            .then(CommandManager.literal("give")
+                                    .requires(src -> src.hasPermissionLevel(2))
+                                    .then(CommandManager.argument("item", StringArgumentType.word())
+                                            .suggests(CUSTOM_ITEM_SUGGESTIONS)
+                                            .executes(KnowledgeCommands::executeGive)))
             );
 
             // /checkxp — legacy alias for /kb
@@ -105,10 +139,18 @@ public final class KnowledgeCommands {
                 .append(Text.literal(" — Show your knowledge levels").formatted(Formatting.GRAY)), false);
         src.sendFeedback(() -> Text.literal("/kb help").formatted(Formatting.YELLOW)
                 .append(Text.literal(" — Show this help").formatted(Formatting.GRAY)), false);
+        src.sendFeedback(() -> Text.literal("/kb gui").formatted(Formatting.YELLOW)
+                .append(Text.literal(" — Open knowledge progress GUI").formatted(Formatting.GRAY)), false);
+        src.sendFeedback(() -> Text.literal("/kb list").formatted(Formatting.YELLOW)
+                .append(Text.literal(" — List all knowledge types").formatted(Formatting.GRAY)), false);
         src.sendFeedback(() -> Text.literal("/kb check <player>").formatted(Formatting.YELLOW)
                 .append(Text.literal(" — Check another player's knowledge [OP]").formatted(Formatting.GRAY)), false);
         src.sendFeedback(() -> Text.literal("/kb set <player> <knowledge> <tier>").formatted(Formatting.YELLOW)
                 .append(Text.literal(" — Set a player's tier [OP]").formatted(Formatting.GRAY)), false);
+        src.sendFeedback(() -> Text.literal("/kb grant <player> <knowledge> <minutes>").formatted(Formatting.YELLOW)
+                .append(Text.literal(" — Grant XP minutes to a player [OP]").formatted(Formatting.GRAY)), false);
+        src.sendFeedback(() -> Text.literal("/kb give <item>").formatted(Formatting.YELLOW)
+                .append(Text.literal(" — Give yourself a custom KB item [OP]").formatted(Formatting.GRAY)), false);
         src.sendFeedback(() -> Text.literal("/kb reset <player> [knowledge]").formatted(Formatting.YELLOW)
                 .append(Text.literal(" — Reset one or all knowledges [OP]").formatted(Formatting.GRAY)), false);
         src.sendFeedback(() -> Text.literal("/kb reload").formatted(Formatting.YELLOW)
@@ -314,6 +356,127 @@ public final class KnowledgeCommands {
         } else {
             src.sendFeedback(() -> Text.literal("Knowledge HUD disabled.").formatted(Formatting.GREEN), false);
         }
+        return Command.SINGLE_SUCCESS;
+    }
+    // --------------------------------------------------
+    // /kb gui
+    // --------------------------------------------------
+
+    private static int executeGui(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource src = ctx.getSource();
+        ServerPlayerEntity player;
+        try {
+            player = src.getPlayerOrThrow();
+        } catch (Exception e) {
+            src.sendError(Text.literal("This command can only be used by a player."));
+            return 0;
+        }
+
+        KnowledgeGuiHandler.open(player);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    // --------------------------------------------------
+    // /kb list
+    // --------------------------------------------------
+
+    private static int executeList(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource src = ctx.getSource();
+        src.sendFeedback(() -> Text.literal("=== Registered Knowledges ===").formatted(Formatting.GOLD), false);
+
+        for (KnowledgeDefinition def : KnowledgeRegistry.all()) {
+            String name = titleCase(def.getId().getPath());
+            int maxTier = def.getMaxTier();
+            String category = def.getJobCategory().name().replace('_', ' ').toLowerCase();
+            String line = String.format("  %s — Max Tier %d (%s)", name, maxTier, category);
+            src.sendFeedback(() -> Text.literal(line).formatted(Formatting.YELLOW), false);
+        }
+
+        return Command.SINGLE_SUCCESS;
+    }
+
+    // --------------------------------------------------
+    // /kb grant <player> <knowledge> <minutes>
+    // --------------------------------------------------
+
+    private static int executeGrant(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource src = ctx.getSource();
+
+        ServerPlayerEntity target;
+        try {
+            target = EntityArgumentType.getPlayer(ctx, "player");
+        } catch (Exception e) {
+            src.sendError(Text.literal("Player not found."));
+            return 0;
+        }
+
+        String name = StringArgumentType.getString(ctx, "knowledge");
+        Identifier knowledgeId = resolveKnowledge(name);
+        if (knowledgeId == null) {
+            src.sendError(Text.literal("Unknown knowledge: " + name + ". Use tab-complete for valid names."));
+            return 0;
+        }
+
+        KnowledgeDefinition def = KnowledgeRegistry.get(knowledgeId);
+        if (def == null) {
+            src.sendError(Text.literal("Knowledge definition not found for: " + name));
+            return 0;
+        }
+
+        int minutes = IntegerArgumentType.getInteger(ctx, "minutes");
+        String displayName = titleCase(knowledgeId.getPath());
+
+        // grant the minutes
+        PlayerKnowledgeManager.PlayerKnowledgeState state =
+                PlayerKnowledgeManager.getState(target, knowledgeId);
+
+        for (int i = 0; i < minutes; i++) {
+            PlayerKnowledgeManager.grantMinute(target, knowledgeId);
+        }
+
+        // feedback
+        ServerPlayerEntity finalTarget = target;
+        src.sendFeedback(() -> Text.literal("Granted " + minutes + " minutes of " + displayName + " to " + finalTarget.getName().getString() + ".")
+                .formatted(Formatting.GREEN), true);
+
+        target.sendMessage(
+                Text.literal("You received " + minutes + " minutes of " + displayName + " experience!")
+                        .formatted(Formatting.GOLD),
+                false
+        );
+
+        return Command.SINGLE_SUCCESS;
+    }
+
+    // --------------------------------------------------
+    // /kb give <item>
+    // --------------------------------------------------
+
+    private static int executeGive(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource src = ctx.getSource();
+        ServerPlayerEntity player;
+        try {
+            player = src.getPlayerOrThrow();
+        } catch (Exception e) {
+            src.sendError(Text.literal("This command can only be used by a player."));
+            return 0;
+        }
+
+        String itemName = StringArgumentType.getString(ctx, "item");
+        ItemStack stack = CustomItemRegistry.create(itemName);
+
+        if (stack == null) {
+            src.sendError(Text.literal("Unknown custom item: " + itemName + ". Use tab-complete for valid items."));
+            return 0;
+        }
+
+        // give to player
+        if (!player.getInventory().insertStack(stack)) {
+            player.dropItem(stack, false);
+        }
+
+        String displayName = CustomItemRegistry.displayName(itemName);
+        src.sendFeedback(() -> Text.literal("Given " + displayName + "!").formatted(Formatting.GREEN), false);
         return Command.SINGLE_SUCCESS;
     }
 

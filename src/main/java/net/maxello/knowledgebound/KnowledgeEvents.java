@@ -9,14 +9,19 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.CropBlock;
+import net.minecraft.block.entity.BeehiveBlockEntity;
+import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.tag.DamageTypeTags;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -31,6 +36,15 @@ import java.util.Random;
 public class KnowledgeEvents {
 
     private static final Random RANDOM = new Random();
+
+    /**
+     * Stores the cursor stack from BEFORE a slot click was processed.
+     * Set by ScreenHandlerMixin at the start of onSlotClick.
+     * Used by CraftingResultSlotMixin to restore the correct cursor on craft fail,
+     * since by the time onTakeItem fires, vanilla has already placed the
+     * crafted item on the cursor.
+     */
+    public static final ThreadLocal<ItemStack> PRE_CLICK_CURSOR = new ThreadLocal<>();
 
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering events…");
@@ -80,9 +94,9 @@ public class KnowledgeEvents {
             Block block = state.getBlock();
             Identifier blockId = Registries.BLOCK.getId(block);
 
-            // beehive/bee nest silk touch restriction
+            // beehive/bee nest restriction
             if (block instanceof net.minecraft.block.BeehiveBlock) {
-                return handleBeehiveBreak(serverPlayer, state);
+                return handleBeehiveBreak(serverPlayer, state, blockEntity);
             }
 
             if (isForestryBlock(blockId)) {
@@ -113,33 +127,26 @@ public class KnowledgeEvents {
     }
 
     /**
-     * Beehive breaking: if the player has Silk Touch, they need beekeeping tier 3+
-     * to move beehives. Without silk touch, anyone can break them (drops nothing useful).
+     * Beehive breaking: if the beehive has stored bees or changed data,
+     * require beekeeping master tier to break it. Beehives in 1.21.1 always
+     * drop as items and copy component data (including stored bees), so we
+     * must restrict breaking entirely — not just silk touch.
      */
-    private static boolean handleBeehiveBreak(ServerPlayerEntity player, BlockState state) {
-        ItemStack tool = player.getMainHandStack();
-
-        // check if tool has silk touch via enchantment components
-        boolean hasSilkTouch = false;
-        var enchantments = tool.getEnchantments();
-        if (enchantments != null) {
-            for (var entry : enchantments.getEnchantmentEntries()) {
-                Identifier enchId = entry.getKey().getKey().map(k -> k.getValue()).orElse(null);
-                if (enchId != null && enchId.getPath().equals("silk_touch")) {
-                    hasSilkTouch = true;
-                    break;
-                }
-            }
+    private static boolean handleBeehiveBreak(ServerPlayerEntity player, BlockState state, BlockEntity blockEntity) {
+        // check if the beehive has stored bees (changed data)
+        boolean hasStoredBees = false;
+        if (blockEntity instanceof BeehiveBlockEntity beehiveEntity) {
+            hasStoredBees = !beehiveEntity.hasNoBees();
         }
 
-        if (hasSilkTouch) {
+        if (hasStoredBees) {
             int beekeepingTier = PlayerKnowledgeManager.getTier(player, KnowledgeRegistry.BEEKEEPING_ID);
             int minTier = KnowledgeBoundConfig.INSTANCE.silkTouchBeehiveMinTier;
 
             if (beekeepingTier < minTier) {
                 player.sendMessage(
-                        Text.literal("You need Beekeeping Tier " + minTier + " to move beehives.")
-                                .formatted(net.minecraft.util.Formatting.RED),
+                        Text.literal("You need Beekeeping Tier " + minTier + " to move beehives with bees.")
+                                .formatted(Formatting.RED),
                         true
                 );
                 return false; // block the break
@@ -497,6 +504,74 @@ public class KnowledgeEvents {
                 || path.endsWith("_leggings")
                 || path.endsWith("_boots")
                 || path.equals("turtle_helmet");
+    }
+
+    // ----------------------------------------------------------------------
+    // Stonecutter output hook (used by StonecutterScreenHandlerMixin + ScreenHandlerMixin)
+    // ----------------------------------------------------------------------
+
+    /**
+     * Apply masonry mechanics when a player takes stonecutter output.
+     * Returns true if the craft FAILED (caller should cancel the item transfer).
+     */
+    public static boolean handleStonecutterOutput(ServerPlayerEntity player, ScreenHandler handler) {
+        Slot outputSlot = handler.slots.get(1);
+        if (!outputSlot.hasStack() || outputSlot.getStack().isEmpty()) return false;
+
+        ItemStack outputStack = outputSlot.getStack();
+        int masonryTier = PlayerKnowledgeManager.getTier(player, KnowledgeRegistry.MASONRY_ID);
+        Identifier itemId = Registries.ITEM.getId(outputStack.getItem());
+        int itemTier = CraftingRuleRegistry.getItemTier(itemId);
+        int diff = masonryTier - itemTier;
+
+        // get fail chance from config
+        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
+        KnowledgeBoundConfig.CraftingTierChances tc = cfg.getCraftingChancesForDiff(diff);
+        tc.normalize();
+
+        double failChance = Math.max(0.0, tc.failChance);
+
+        if (RANDOM.nextDouble() < failChance) {
+            // craft failed — consume input, clear output, notify player
+            player.sendMessage(
+                    KnowledgeBoundTextFormatter.craftingFail(KnowledgeRegistry.MASONRY_ID),
+                    true
+            );
+
+            // clear the input slot (slot 0) to consume ingredients
+            Slot inputSlot = handler.slots.get(0);
+            ItemStack inputStack = inputSlot.getStack();
+            if (!inputStack.isEmpty()) {
+                inputStack.decrement(1);
+            }
+
+            // clear the output
+            outputSlot.setStack(ItemStack.EMPTY);
+
+            // sync to client
+            handler.sendContentUpdates();
+
+            // still grant XP (you learn from failure)
+            PlayerKnowledgeManager.grantMinuteIfAllowed(player, KnowledgeRegistry.MASONRY_ID);
+            return true;
+        }
+
+        // apply cutting damage chance
+        double cutChance = cfg.stonecutterCutChanceTier1 - ((masonryTier - 1) * cfg.stonecutterCutReductionPerTier);
+        cutChance = Math.max(0.0, cutChance);
+
+        if (RANDOM.nextDouble() < cutChance) {
+            player.damage(player.getDamageSources().generic(), cfg.stonecutterCutDamage);
+            player.sendMessage(
+                    Text.literal("You cut yourself on the stonecutter!")
+                            .formatted(Formatting.RED),
+                    true
+            );
+        }
+
+        // grant masonry xp on successful craft
+        PlayerKnowledgeManager.grantMinuteIfAllowed(player, KnowledgeRegistry.MASONRY_ID);
+        return false;
     }
 
     // ----------------------------------------------------------------------

@@ -70,10 +70,7 @@ public class PlayerKnowledgeManager {
                 boolean isCraftingKnowledge =
                         knowledgeId.equals(KnowledgeRegistry.TOOLSMITHING_ID) ||
                                 knowledgeId.equals(KnowledgeRegistry.WEAPONSMITHING_ID) ||
-                                knowledgeId.equals(KnowledgeRegistry.ARMOURING_ID) ||
-                                knowledgeId.equals(KnowledgeRegistry.CARPENTRY_ID) ||
-                                knowledgeId.equals(KnowledgeRegistry.MASONRY_ID) ||
-                                knowledgeId.equals(KnowledgeRegistry.BEEKEEPING_ID);
+                                knowledgeId.equals(KnowledgeRegistry.ARMOURING_ID);
 
                 if (!isCraftingKnowledge) {
                     player.sendMessage(
@@ -90,6 +87,23 @@ public class PlayerKnowledgeManager {
         }
 
         // ALWAYS: XP bar should reflect this knowledge's current state
+        updateXpBarForKnowledge(player, knowledgeId, def, state);
+    }
+
+    /**
+     * Grants one minute of XP unconditionally (bypasses rate limiter).
+     * Used by admin commands like /kb grant.
+     */
+    public static void grantMinute(ServerPlayerEntity player, Identifier knowledgeId) {
+        KnowledgeDefinition def = KnowledgeRegistry.get(knowledgeId);
+        if (def == null) return;
+
+        PlayerKnowledgeState state = getState(player, knowledgeId);
+        state.currentMinutes += 1;
+
+        tryLevelUp(player, knowledgeId, def, state);
+        sendFullSync(player);
+        KnowledgeScoreboardHud.updateScoreboard(player);
         updateXpBarForKnowledge(player, knowledgeId, def, state);
     }
 

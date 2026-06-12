@@ -80,22 +80,23 @@ public class CraftingKnowledgeRule {
         }
 
         if (roll < failChance + poorChance) {
-            // scuffed craft
+            // scuffed craft — only applies to damageable items (tools, weapons, armor)
             ItemStack poor = originalStack.copy();
             int maxDmg = poor.getMaxDamage();
 
             if (maxDmg > 0) {
-                int remaining = Math.max(1, (int) Math.round(maxDmg * poorDurabilityFraction));
+                int remaining = Math.max(1, (int) Math.round(maxDmg * KnowledgeBoundConfig.INSTANCE.poorDurabilityFraction));
                 int damage = maxDmg - remaining;
                 poor.setDamage(damage);
-            }
 
-            // send poor quality actionbar
-            player.sendMessage(
-                    KnowledgeBoundTextFormatter.craftingQuality(knowledgeId, "poor"),
-                    true
-            );
-            return poor;
+                // send poor quality actionbar
+                player.sendMessage(
+                        KnowledgeBoundTextFormatter.craftingQuality(knowledgeId, "poor"),
+                        true
+                );
+                return poor;
+            }
+            // non-damageable items can't be "poor quality" — fall through to normal craft
         }
 
         // normal craft
