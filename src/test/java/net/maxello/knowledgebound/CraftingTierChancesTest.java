@@ -56,18 +56,36 @@ class CraftingTierChancesTest {
     void getCraftingChancesForDiff_diffMinusTwo_highFail() {
         var cfg = new KnowledgeBoundConfig();
         var tc = cfg.getCraftingChancesForDiff(-2);
-        assertEquals(0.85, tc.failChance,   1e-9);
-        assertEquals(0.12, tc.poorChance,   1e-9);
-        assertEquals(0.03, tc.normalChance, 1e-9);
+        assertEquals(0.90, tc.failChance,   1e-9);
+        assertEquals(0.08, tc.poorChance,   1e-9);
+        assertEquals(0.02, tc.normalChance, 1e-9);
+    }
+
+    @Test
+    void getCraftingChancesForDiff_diffMinusOne_challenging() {
+        var cfg = new KnowledgeBoundConfig();
+        var tc = cfg.getCraftingChancesForDiff(-1);
+        assertEquals(0.75, tc.failChance,   1e-9);
+        assertEquals(0.20, tc.poorChance,   1e-9);
+        assertEquals(0.05, tc.normalChance, 1e-9);
     }
 
     @Test
     void getCraftingChancesForDiff_diffZero_atLevel() {
         var cfg = new KnowledgeBoundConfig();
         var tc = cfg.getCraftingChancesForDiff(0);
-        assertEquals(0.10, tc.failChance,   1e-9);
-        assertEquals(0.15, tc.poorChance,   1e-9);
-        assertEquals(0.75, tc.normalChance, 1e-9);
+        assertEquals(0.50, tc.failChance,   1e-9);
+        assertEquals(0.40, tc.poorChance,   1e-9);
+        assertEquals(0.10, tc.normalChance, 1e-9);
+    }
+
+    @Test
+    void getCraftingChancesForDiff_diffPlusOne_easy() {
+        var cfg = new KnowledgeBoundConfig();
+        var tc = cfg.getCraftingChancesForDiff(1);
+        assertEquals(0.20, tc.failChance,   1e-9);
+        assertEquals(0.30, tc.poorChance,   1e-9);
+        assertEquals(0.50, tc.normalChance, 1e-9);
     }
 
     @Test

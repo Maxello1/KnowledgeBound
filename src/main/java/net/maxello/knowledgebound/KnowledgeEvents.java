@@ -144,11 +144,9 @@ public class KnowledgeEvents {
             int minTier = KnowledgeBoundConfig.INSTANCE.silkTouchBeehiveMinTier;
 
             if (beekeepingTier < minTier) {
-                player.sendMessage(
-                        Text.literal("You need Beekeeping Tier " + minTier + " to move beehives with bees.")
-                                .formatted(Formatting.RED),
-                        true
-                );
+                String template = KnowledgeBoundConfig.INSTANCE.messages.silkTouchBeehiveLimit;
+                String msgStr = template.replace("{minTier}", String.valueOf(minTier));
+                player.sendMessage(Text.literal(msgStr), true);
                 return false; // block the break
             }
         }
@@ -429,11 +427,8 @@ public class KnowledgeEvents {
 
         // 0) Check if the item is completely blocked from crafting
         if (CraftingRuleRegistry.isBlocked(itemId)) {
-            player.sendMessage(
-                    Text.literal("This item cannot be crafted.")
-                            .formatted(net.minecraft.util.Formatting.RED),
-                    true
-            );
+            String msgStr = KnowledgeBoundConfig.INSTANCE.messages.blockedCraftingItem;
+            player.sendMessage(Text.literal(msgStr), true);
             return ItemStack.EMPTY;
         }
 
@@ -562,12 +557,14 @@ public class KnowledgeEvents {
 
         if (RANDOM.nextDouble() < cutChance) {
             player.damage(player.getDamageSources().generic(), cfg.stonecutterCutDamage);
-            player.sendMessage(
-                    Text.literal("You cut yourself on the stonecutter!")
-                            .formatted(Formatting.RED),
-                    true
-            );
+            String msgStr = cfg.messages.stonecutterCutSelf;
+            player.sendMessage(Text.literal(msgStr), true);
         }
+
+        // send normal quality craft message
+        String msgTemplate = cfg.messages.craftingQualityNormal;
+        String msgStr = msgTemplate.replace("{knowledge}", "Masonry");
+        player.sendMessage(Text.literal(msgStr), true);
 
         // grant masonry xp on successful craft
         PlayerKnowledgeManager.grantMinuteIfAllowed(player, KnowledgeRegistry.MASONRY_ID);

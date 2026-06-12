@@ -201,10 +201,10 @@ public class KnowledgeBoundConfig {
             "",
             "Array entries (6 levels of difficulty):",
             "  [0] = diff <= -3  (way out of your league — guaranteed fail)",
-            "  [1] = diff  = -2  (very risky — 85% fail)",
-            "  [2] = diff  = -1  (challenging — 45% fail)",
-            "  [3] = diff  =  0  (at your level — 10% fail)",
-            "  [4] = diff  = +1  (below your skill — no fail)",
+            "  [1] = diff  = -2  (very risky — 90% fail)",
+            "  [2] = diff  = -1  (challenging — 75% fail)",
+            "  [3] = diff  =  0  (at your level — 50% fail)",
+            "  [4] = diff  = +1  (below your skill — 20% fail)",
             "  [5] = diff >= +2  (trivial — always perfect)",
             "",
             "Each entry has three chances that must add up to 1.0 (auto-normalized):",
@@ -267,10 +267,10 @@ public class KnowledgeBoundConfig {
     private static CraftingTierChances[] defaultCraftingDiffChances() {
         return new CraftingTierChances[] {
                 new CraftingTierChances(1.00, 0.00, 0.00), // diff <= -3: impossible
-                new CraftingTierChances(0.85, 0.12, 0.03), // diff  = -2: very risky
-                new CraftingTierChances(0.45, 0.35, 0.20), // diff  = -1: challenging
-                new CraftingTierChances(0.10, 0.15, 0.75), // diff  =  0: at your level
-                new CraftingTierChances(0.00, 0.08, 0.92), // diff  = +1: below your skill
+                new CraftingTierChances(0.90, 0.08, 0.02), // diff  = -2: very risky
+                new CraftingTierChances(0.75, 0.20, 0.05), // diff  = -1: challenging
+                new CraftingTierChances(0.50, 0.40, 0.10), // diff  =  0: at your level
+                new CraftingTierChances(0.20, 0.30, 0.50), // diff  = +1: below your skill
                 new CraftingTierChances(0.00, 0.00, 1.00)  // diff >= +2: trivial
         };
     }
@@ -505,6 +505,37 @@ public class KnowledgeBoundConfig {
             this.durationTicks = durationTicks;
             this.amplifier = amplifier;
         }
+    }
+
+    // --------------------------------------------------
+    // Configurable gameplay messages
+    // --------------------------------------------------
+
+    public List<String> _comment_messages = List.of(
+            "=== Gameplay Messages ===",
+            "Customize the text messages sent to players during gameplay.",
+            "You can use Minecraft formatting codes (e.g. §a for green, §c for red, §6 for gold, etc.).",
+            "Use standard placeholders: {knowledge}, {tier}, {minTier}, {honeyName}, {tierName}."
+    );
+
+    public MessagesConfig messages = new MessagesConfig();
+
+    public static class MessagesConfig {
+        public String learning = "§aYou're learning {knowledge}!";
+        public String levelUp = "§6Your {knowledge} knowledge increased to Tier {tier}!";
+        public String craftingFail = "§cYour {knowledge} attempt failed to yield any items.";
+        public String craftingLevelTooLow = "§cYou don't have enough {knowledge} knowledge to work with these materials.";
+        public String craftingQualityPoor = "§bYou crafted a §d§lpoor§r§b quality item. Improve your {knowledge} knowledge for better quality.";
+        public String craftingQualityNormal = "§bYou crafted a §a§lnormal§r§b quality item.";
+        public String gatheringFail = "§cYour {knowledge} attempt failed to yield any resources.";
+        public String proficiencyLimitReached = "§4You've reached your proficiency limit for {knowledge}. You cannot advance further.";
+        public String blockedCraftingItem = "§cThis item cannot be crafted.";
+        public String stonecutterMinTierLimit = "§cYou need Masonry Tier {minTier} to use the stonecutter.";
+        public String stonecutterCutSelf = "§cYou cut yourself on the stonecutter!";
+        public String silkTouchBeehiveLimit = "§cYou need Beekeeping Tier {minTier} to move beehives with bees.";
+        public String beehiveAngeredBees = "§cYour clumsy handling angered the bees!";
+        public String royalHoneyHarvested = "§6You harvested some {honeyName}!";
+        public String armorRestricted = "§cYou need {tierName} Combat Knowledge to wear this armor!";
     }
 
     // --------------------------------------------------

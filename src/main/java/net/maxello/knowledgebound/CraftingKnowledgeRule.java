@@ -100,6 +100,10 @@ public class CraftingKnowledgeRule {
         }
 
         // normal craft
+        player.sendMessage(
+                KnowledgeBoundTextFormatter.craftingQuality(knowledgeId, "normal"),
+                true
+        );
         return originalStack;
     }
 }

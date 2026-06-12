@@ -59,9 +59,9 @@ public abstract class BeehiveMixin {
         double failChance = cfg.beekeepingHarvestFail.getForTier(beekeepingTier);
         if (RANDOM.nextDouble() < failChance) {
             // anger the bees regardless of campfire
+            String msgStr = cfg.messages.beehiveAngeredBees;
             serverPlayer.sendMessage(
-                    Text.literal("Your clumsy handling angered the bees!")
-                            .formatted(Formatting.RED),
+                    Text.literal(msgStr),
                     true
             );
 
@@ -116,9 +116,10 @@ public abstract class BeehiveMixin {
             player.dropItem(betterHoney, false);
         }
 
+        String template = cfg.messages.royalHoneyHarvested;
+        String msgStr = template.replace("{honeyName}", cfg.betterHoney.customName);
         player.sendMessage(
-                Text.literal("You harvested some " + cfg.betterHoney.customName + "!")
-                        .formatted(Formatting.GOLD),
+                Text.literal(msgStr),
                 true
         );
     }

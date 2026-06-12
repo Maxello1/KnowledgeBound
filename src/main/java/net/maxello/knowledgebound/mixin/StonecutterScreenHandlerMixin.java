@@ -43,9 +43,10 @@ public abstract class StonecutterScreenHandlerMixin extends ScreenHandler {
 
         // require masonry tier to use stonecutter at all
         if (masonryTier < minTier) {
+            String template = KnowledgeBoundConfig.INSTANCE.messages.stonecutterMinTierLimit;
+            String msgStr = template.replace("{minTier}", String.valueOf(minTier));
             serverPlayer.sendMessage(
-                    Text.literal("You need Masonry Tier " + minTier + " to use the stonecutter.")
-                            .formatted(Formatting.RED),
+                    Text.literal(msgStr),
                     true
             );
             cir.setReturnValue(false);

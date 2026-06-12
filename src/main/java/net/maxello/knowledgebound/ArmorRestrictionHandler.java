@@ -56,8 +56,9 @@ public final class ArmorRestrictionHandler {
         if (combatTier < requiredTier) {
             String tierName = getTierName(requiredTier);
 
-            Text msg = Text.literal("You need " + tierName + " Combat Knowledge to wear this armor!")
-                    .formatted(Formatting.RED);
+            String template = KnowledgeBoundConfig.INSTANCE.messages.armorRestricted;
+            String msgStr = template.replace("{tierName}", tierName);
+            Text msg = Text.literal(msgStr);
             // Action bar message
             player.sendMessage(msg, true);
 

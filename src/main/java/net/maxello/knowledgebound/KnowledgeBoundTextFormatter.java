@@ -31,65 +31,70 @@ public final class KnowledgeBoundTextFormatter {
     //  XP / Level messages
     // --------------------------------------------------
 
-    /** Green "You’re learning <Knowledge>!" line. */
+    /** "You’re learning <Knowledge>!" line. */
     public static Text learningTick(Identifier knowledgeId) {
         String name = displayName(knowledgeId);
-        return Text.literal("You're learning " + name + "!")
-                .formatted(Formatting.GREEN);
+        String template = KnowledgeBoundConfig.INSTANCE.messages.learning;
+        String formatted = template.replace("{knowledge}", name);
+        return Text.literal(formatted);
     }
 
-    /** Gold level-up line. */
+    /** Level-up line. */
     public static Text levelUp(Identifier knowledgeId, int tier) {
         String name = displayName(knowledgeId);
-        return Text.literal("Your " + name + " knowledge increased to Tier " + tier + "!")
-                .formatted(Formatting.GOLD);
+        String template = KnowledgeBoundConfig.INSTANCE.messages.levelUp;
+        String formatted = template.replace("{knowledge}", name)
+                .replace("{tier}", String.valueOf(tier));
+        return Text.literal(formatted);
     }
 
     // --------------------------------------------------
     //  Crafting result messages
     // --------------------------------------------------
 
-    /** Red failure message for any crafting knowledge */
+    /** Failure message for any crafting knowledge */
     public static Text craftingFail(Identifier knowledgeId) {
         String name = displayName(knowledgeId);
-        return Text.literal("Your " + name + " attempt failed to yield any items.")
-                .formatted(Formatting.RED);
+        String template = KnowledgeBoundConfig.INSTANCE.messages.craftingFail;
+        String formatted = template.replace("{knowledge}", name);
+        return Text.literal(formatted);
     }
 
-    /** Red message: player doesn't have a high enough tier for material job crafting */
+    /** Message: player doesn't have a high enough tier for material job crafting */
     public static Text craftingLevelTooLow(Identifier knowledgeId) {
         String name = displayName(knowledgeId);
-        return Text.literal("You don't have enough " + name + " knowledge to work with these materials.")
-                .formatted(Formatting.RED);
+        String template = KnowledgeBoundConfig.INSTANCE.messages.craftingLevelTooLow;
+        String formatted = template.replace("{knowledge}", name);
+        return Text.literal(formatted);
     }
 
-    /** Cyan text with purple "<quality>" word for crafting results. */
+    /** Colored text for crafting quality results. */
     public static Text craftingQuality(Identifier knowledgeId, String quality) {
         String name = displayName(knowledgeId);
-        MutableText base = Text.literal("You crafted a ")
-                .formatted(Formatting.AQUA);
-
-        MutableText qualityWord = Text.literal(quality + " ")
-                .formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD);
-
-        MutableText tail = Text.literal("quality item. Improve your " + name + " knowledge for better quality.")
-                .formatted(Formatting.AQUA);
-
-        return base.append(qualityWord).append(tail);
+        String template;
+        if ("poor".equalsIgnoreCase(quality)) {
+            template = KnowledgeBoundConfig.INSTANCE.messages.craftingQualityPoor;
+        } else {
+            template = KnowledgeBoundConfig.INSTANCE.messages.craftingQualityNormal;
+        }
+        String formatted = template.replace("{knowledge}", name);
+        return Text.literal(formatted);
     }
 
-    /** Red message for gather failures: Forestry, Mining, Digging, Farming. */
+    /** Message for gather failures: Forestry, Mining, Digging, Farming. */
     public static Text gatheringFail(Identifier knowledgeId) {
         String name = displayName(knowledgeId);
-        return Text.literal("Your " + name + " attempt failed to yield any resources.")
-                .formatted(Formatting.RED);
+        String template = KnowledgeBoundConfig.INSTANCE.messages.gatheringFail;
+        String formatted = template.replace("{knowledge}", name);
+        return Text.literal(formatted);
     }
 
-    /** Dark red message when proficiency cap blocks leveling up */
+    /** Message when proficiency cap blocks leveling up */
     public static Text proficiencyLimitReached(Identifier knowledgeId) {
         String name = displayName(knowledgeId);
-        return Text.literal("You've reached your proficiency limit for " + name + ". You cannot advance further.")
-                .formatted(Formatting.DARK_RED);
+        String template = KnowledgeBoundConfig.INSTANCE.messages.proficiencyLimitReached;
+        String formatted = template.replace("{knowledge}", name);
+        return Text.literal(formatted);
     }
 
 }
