@@ -94,6 +94,31 @@ public class KnowledgeEvents {
             Block block = state.getBlock();
             Identifier blockId = Registries.BLOCK.getId(block);
 
+            // 1. If block ABOVE is a mature crop, apply farming checks first
+            BlockPos abovePos = pos.up();
+            BlockState aboveState = world.getBlockState(abovePos);
+            Identifier aboveId = Registries.BLOCK.getId(aboveState.getBlock());
+            if (isMatureFarmingBlock(aboveState, aboveId)) {
+                KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FARMING_ID);
+                if (def != null) {
+                    int tier = PlayerKnowledgeManager.getTier(serverPlayer, def.getId());
+                    double failChance = getGatherFailChance(def, tier);
+                    boolean fail = RANDOM.nextDouble() < failChance;
+
+                    if (fail) {
+                        // Destroy crop on top with no drops
+                        world.setBlockState(abovePos, Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL);
+                        serverPlayer.sendMessage(
+                                KnowledgeBoundTextFormatter.gatheringFail(def.getId()),
+                                true
+                        );
+                    } else {
+                        // Success: grant XP
+                        PlayerKnowledgeManager.grantMinuteIfAllowed(serverPlayer, def.getId());
+                    }
+                }
+            }
+
             // beehive/bee nest restriction
             if (block instanceof net.minecraft.block.BeehiveBlock) {
                 return handleBeehiveBreak(serverPlayer, state, blockEntity);

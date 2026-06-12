@@ -503,6 +503,8 @@ All commands use the `/kb` prefix. Legacy alias `/checkxp` is also available for
 | `/kb reset <player>` | Reset ALL knowledges for a player to Tier 0 |
 | `/kb reset <player> <knowledge>` | Reset a single knowledge to Tier 0 |
 | `/kb reload` | Hot-reload `knowledgebound.json` without restart |
+| `/kb config get <key>` | Query the current value of a configuration key |
+| `/kb config set <key> <value>` | Modify a configuration key value and save it to disk immediately |
 
 ---
 

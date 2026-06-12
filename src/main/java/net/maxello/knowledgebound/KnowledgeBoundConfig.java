@@ -566,4 +566,18 @@ public class KnowledgeBoundConfig {
             }
         }
     }
+
+    public void save() {
+        Path configDir = FabricLoader.getInstance().getConfigDir();
+        Path path = configDir.resolve("knowledgebound.json");
+        try {
+            Files.createDirectories(configDir);
+            try (Writer writer = Files.newBufferedWriter(path)) {
+                GSON.toJson(this, writer);
+            }
+            KnowledgeBound.LOGGER.info("[KnowledgeBound] Saved config to {}", path);
+        } catch (IOException e) {
+            KnowledgeBound.LOGGER.error("[KnowledgeBound] Failed to save config.", e);
+        }
+    }
 }
