@@ -2,9 +2,12 @@ package net.maxello.knowledgebound.mixin;
 
 import net.maxello.knowledgebound.KnowledgeBound;
 import net.maxello.knowledgebound.KnowledgeEvents;
+import net.maxello.knowledgebound.SupervisedJob;
+import net.maxello.knowledgebound.SupervisedJobManager;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
+import net.minecraft.screen.AbstractFurnaceScreenHandler;
 import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.StonecutterScreenHandler;
@@ -12,7 +15,9 @@ import net.minecraft.screen.slot.CraftingResultSlot;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -82,6 +87,89 @@ public class ScreenHandlerMixin {
             return;
         }
 
+        // --- Furnace output slot collection (supervised jobs) ---
+        if (self instanceof AbstractFurnaceScreenHandler) {
+            // Slot 2 is the output slot in furnaces/smokers/blast furnaces
+            if (slotIndex == 2) {
+                Slot outputSlot = self.slots.get(2);
+                if (outputSlot.hasStack() && !outputSlot.getStack().isEmpty()) {
+                    if (serverPlayer.getWorld() instanceof ServerWorld serverWorld) {
+                        // Find the furnace position from the player's vicinity
+                        BlockPos furnacePos = SupervisedJobManager.findFurnacePosForPlayer(serverPlayer);
+                        if (furnacePos != null) {
+                            boolean allowed = SupervisedJobManager.onItemCollected(
+                                    serverPlayer, serverWorld, furnacePos);
+                            if (!allowed) {
+                                // Fail — consume the output
+                                outputSlot.setStack(ItemStack.EMPTY);
+                                self.sendContentUpdates();
+                                ci.cancel();
+                                return;
+                            }
+                            // Success — let vanilla handle the pickup
+                        }
+                    }
+                }
+            }
+            // Block manual insertion into input slot
+            if (slotIndex == 0) {
+                ItemStack incoming = ItemStack.EMPTY;
+                if (actionType == SlotActionType.PICKUP) {
+                    incoming = serverPlayer.currentScreenHandler.getCursorStack();
+                } else if (actionType == SlotActionType.QUICK_CRAFT) {
+                    incoming = serverPlayer.currentScreenHandler.getCursorStack();
+                } else if (actionType == SlotActionType.SWAP) {
+                    incoming = serverPlayer.getInventory().getStack(button);
+                }
+
+                if (!incoming.isEmpty()) {
+                    Identifier id = Registries.ITEM.getId(incoming.getItem());
+                    SupervisedJob.JobType jt = SupervisedJobManager.getJobTypeForItem(id);
+                    if (jt != null) {
+                        // How many items are trying to be added?
+                        Slot inputSlot = self.slots.get(0);
+                        int currentCount = inputSlot.hasStack() ? inputSlot.getStack().getCount() : 0;
+                        int incomingCount = actionType == SlotActionType.PICKUP && button == 1 ? 1 : incoming.getCount();
+
+                        if (currentCount + incomingCount > 1) {
+                            KnowledgeBound.LOGGER.debug("[KB] Blocked manual insertion of >1 supervised items");
+                            ci.cancel();
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Also block shift-clicking stacks of supervised items INTO the input slot
+            if (actionType == SlotActionType.QUICK_MOVE && slotIndex >= 3) {
+                // Player shift-clicking from their inventory into furnace
+                Slot sourceSlot = self.slots.get(slotIndex);
+                if (sourceSlot.hasStack()) {
+                    ItemStack sourceStack = sourceSlot.getStack();
+                    Identifier sourceItemId = Registries.ITEM.getId(sourceStack.getItem());
+                    SupervisedJob.JobType jt = SupervisedJobManager.getJobTypeForItem(sourceItemId);
+                    if (jt != null) {
+                        // Check if there's already an item in the input slot
+                        ItemStack currentInput = self.slots.get(0).getStack();
+                        if (currentInput.isEmpty()) {
+                            // Allow only 1 item via shift-click: place 1, keep rest
+                            ItemStack singleItem = sourceStack.copy();
+                            singleItem.setCount(1);
+                            self.slots.get(0).setStack(singleItem);
+                            sourceStack.decrement(1);
+                            self.sendContentUpdates();
+                            ci.cancel();
+                            return;
+                        } else {
+                            // Input slot already has something — block
+                            ci.cancel();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
         // --- Crafting result slot shift-click protection (all screen handlers) ---
         if (actionType != SlotActionType.QUICK_MOVE) return;
         if (slotIndex < 0 || slotIndex >= self.slots.size()) return;
@@ -96,14 +184,25 @@ public class ScreenHandlerMixin {
 
         KnowledgeBound.LOGGER.debug("[KB] Shift-click craft intercepted: {}", itemId);
 
-        ItemStack modified = KnowledgeEvents.handleCrafting(
-                serverPlayer,
-                itemId,
-                stack.copy()
-        );
+        KnowledgeEvents.SKIP_NEXT_ROLL.set(true);
+        ItemStack modified;
+        try {
+            modified = KnowledgeEvents.handleCrafting(
+                    serverPlayer,
+                    itemId,
+                    stack.copy()
+            );
+        } finally {
+            // we do NOT clear it here! We must let it remain true so that 
+            // the impending slot.onTakeItem (whether called by us below or by vanilla later)
+            // will see it and skip. It will be cleared inside onTakeItem.
+        }
 
         if (modified == null || modified == stack) {
-            // no rule matched — let vanilla handle normally
+            // no rule matched — let vanilla handle normally.
+            // Clear the flag here so it doesn't leak. If it reaches CraftingResultSlotMixin, 
+            // it will process normally and also find no rule.
+            KnowledgeEvents.SKIP_NEXT_ROLL.set(false);
             return;
         }
 
@@ -119,6 +218,20 @@ public class ScreenHandlerMixin {
             KnowledgeBound.LOGGER.debug("[KB] Shift-click craft POOR for {}, dmg={}", itemId, modified.getDamage());
             slot.setStack(modified);
             // let vanilla continue with the modified stack
+        }
+    }
+
+    /**
+     * Track when a player closes a furnace screen for supervised job grace periods.
+     * onClosed lives on ScreenHandler (parent), so we filter for furnace handlers.
+     */
+    @Inject(method = "onClosed", at = @At("HEAD"))
+    private void knowledgebound$onFurnaceClosed(PlayerEntity player, CallbackInfo ci) {
+        ScreenHandler self = (ScreenHandler) (Object) this;
+        if (self instanceof AbstractFurnaceScreenHandler) {
+            if (player instanceof ServerPlayerEntity serverPlayer) {
+                SupervisedJobManager.onPlayerCloseScreen(serverPlayer);
+            }
         }
     }
 }

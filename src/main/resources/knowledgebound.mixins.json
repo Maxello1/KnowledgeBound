@@ -14,7 +14,14 @@
         "DamageScalingMixin",
         "ScreenHandlerMixin",
         "StonecutterScreenHandlerMixin",
-        "BeehiveMixin"
+        "BeehiveMixin",
+        "FarmlandBlockMixin",
+        "ServerWorldMixin",
+        "BowItemMixin",
+        "CrossbowItemMixin",
+        "FurnaceBlockInteractionMixin",
+        "AbstractFurnaceBlockEntityMixin",
+        "RepairItemRecipeMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -97,4 +97,12 @@ public final class KnowledgeBoundTextFormatter {
         return Text.literal(formatted);
     }
 
+    /**
+     * Format a simple message string (no knowledge placeholder needed).
+     * Used for combat and workstation messages.
+     */
+    public static Text formatSimple(String template) {
+        return Text.literal(template);
+    }
+
 }

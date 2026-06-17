@@ -480,6 +480,8 @@ public class KnowledgeBoundConfig {
     public GatherFailConfig beekeepingHarvestFail = new GatherFailConfig(0.50, 0.30, 0.10, 0.0, 0.0);
     public double[] betterHoneyChance = new double[] { 0.0, 0.10, 0.25 };
     public int silkTouchBeehiveMinTier = 3;
+    /** CustomModelData value applied to Royal Honey for resource pack textures. */
+    public int royalHoneyCustomModelData = 1;
 
     public BetterHoneyConfig betterHoney = new BetterHoneyConfig();
 
@@ -536,7 +538,266 @@ public class KnowledgeBoundConfig {
         public String beehiveAngeredBees = "§cYour clumsy handling angered the bees!";
         public String royalHoneyHarvested = "§6You harvested some {honeyName}!";
         public String armorRestricted = "§cYou need {tierName} Combat Knowledge to wear this armor!";
+
+        // Combat messages
+        public String weaponDropped = "§cYou fumbled your weapon!";
+        public String rangedPoorAccuracy = "§eYour aim was shaky...";
+
+        // Smelting messages
+        public String smeltingFail = "§cYour smelting attempt failed!";
+        public String smeltingSuccess = "§aYou successfully smelted the ore!";
+        public String smeltingTierLocked = "§cYou need Smelting Tier {minTier} to smelt this.";
+        public String smeltingLeftUnattended = "§cYou left the furnace unattended and the job failed!";
+        public String smeltingCollectionExpired = "§cYou didn't collect the result in time!";
+
+        // Cooking messages
+        public String cookingFail = "§cYour cooking attempt burned the food!";
+        public String cookingSuccess = "§aYou successfully cooked the food!";
+        public String cookingSpecialResult = "§6You cooked something special!";
+        public String cookingLeftUnattended = "§cYou left the furnace unattended and the food burned!";
+        public String cookingCollectionExpired = "§cYou didn't collect the food in time!";
+
+        // Shared workstation messages
+        public String furnaceBusy = "§cSomeone else is using this furnace.";
     }
+
+    // --------------------------------------------------
+    // Mob spawn blocking
+    // --------------------------------------------------
+
+    public List<String> _comment_mobBlocking = List.of(
+            "=== Mob Spawn Blocking ===",
+            "Toggle specific mob spawns on or off, or add custom entity IDs to block.",
+            "Set any of the boolean fields to true to prevent that mob from spawning.",
+            "",
+            "blockedMobSpawns: A list of additional entity IDs to block from spawning.",
+            "  Example: [\"minecraft:phantom\", \"mymod:custom_zombie\"]",
+            "",
+            "Admins can toggle individual mob spawns (e.g. blockVillagerSpawns = true)",
+            "or add any entity ID to blockedMobSpawns for full control over the world."
+    );
+
+    /** Whether villager spawns are blocked. */
+    public boolean blockVillagerSpawns = false;
+    /** Whether iron golem spawns are blocked. */
+    public boolean blockIronGolemSpawns = false;
+    /** Whether snow golem spawns are blocked. */
+    public boolean blockSnowGolemSpawns = false;
+    /** Whether copper golem spawns are blocked. */
+    public boolean blockCopperGolemSpawns = false;
+    /** Whether zombie villager spawns are blocked. */
+    public boolean blockZombieVillagerSpawns = false;
+    /** Whether wandering trader spawns are blocked. */
+    public boolean blockWanderingTraderSpawns = false;
+    /** Whether pillager spawns are blocked. */
+    public boolean blockPillagerSpawns = false;
+
+    /** Additional entity IDs that are blocked from spawning. */
+    public List<String> blockedMobSpawns = new ArrayList<>();
+
+    // --------------------------------------------------
+    // Combat weapon dropping & accuracy
+    // --------------------------------------------------
+
+    public List<String> _comment_combat = List.of(
+            "=== Combat Weapon Dropping & Accuracy ===",
+            "weaponDropOnFail: If true, a failed combat roll drops the player's weapon.",
+            "combatWeaponTierOverrides: Per-weapon required tier overrides for combat.",
+            "  Defaults fall back to crafting tier registry (e.g. wooden_sword=0, bow=1, crossbow=2).",
+            "",
+            "bowSpreadPerDiff / crossbowSpreadPerDiff: Extra projectile divergence per tier diff.",
+            "  Index 0 = diff <= -3, 1 = -2, 2 = -1, 3 = 0, 4 = +1, 5 = +2 or higher.",
+            "  Higher values = more inaccuracy. 0 = vanilla accuracy.",
+            "poorSpreadModifier: Additional spread added on a 'poor' combat roll."
+    );
+
+    /** Whether weapon dropping on combat fail is enabled. */
+    public boolean weaponDropOnFail = true;
+    /** Per-weapon required combat tier overrides (item ID -> tier). */
+    public Map<String, Integer> combatWeaponTierOverrides = new HashMap<>();
+    /** Extra bow divergence per tier-difference index. */
+    public double[] bowSpreadPerDiff = new double[] { 6.0, 4.0, 2.0, 0.5, 0.0, 0.0 };
+    /** Extra crossbow divergence per tier-difference index. */
+    public double[] crossbowSpreadPerDiff = new double[] { 4.0, 2.5, 1.5, 0.3, 0.0, 0.0 };
+    /** Additional spread modifier applied on a 'poor' combat roll. */
+    public double poorSpreadModifier = 2.0;
+
+    // --------------------------------------------------
+    // Smelting knowledge (supervised furnace jobs)
+    // --------------------------------------------------
+
+    public List<String> _comment_smelting = List.of(
+            "=== Smelting Knowledge ===",
+            "Smelting is a 3-tier supervised job for metallurgy furnace/blast furnace recipes.",
+            "Players must keep the furnace UI open while smelting. Only one tracked item at a time.",
+            "",
+            "smeltingGraceTimeTicks: Ticks before an unattended job fails (100 = 5 seconds).",
+            "smeltingCollectionWindowTicks: Ticks to collect the result after smelting finishes.",
+            "smeltingLeaveBehaviour: What happens when the grace expires: FAIL or RESET_PROGRESS.",
+            "",
+            "metallurgyItems: Items that require smelting supervision.",
+            "smeltingRecipeTiers: Per-item minimum smelting tier (item ID -> tier). Default: all tier 0.",
+            "smeltingTierYields: Per-item output quantity by tier (item ID -> [tier0, tier1, tier2])."
+    );
+
+    /** Whether smelting supervision is enabled. */
+    public boolean smeltingEnabled = true;
+    /** Base minutes for smelting tiers 1, 2, 3 (before multiplier). */
+    public int[] smeltingBaseMinutes = new int[] { 60, 120, 240 };
+    /** Grace period ticks when the player closes the furnace UI. */
+    public int smeltingGraceTimeTicks = 100;
+    /** Collection window ticks after smelting completes. */
+    public int smeltingCollectionWindowTicks = 100;
+    /** Behavior on grace expiry: "FAIL" or "RESET_PROGRESS". */
+    public String smeltingLeaveBehaviour = "FAIL";
+    /** Fail chances per smelting tier (0-2). */
+    public GatherFailConfig smeltingFailChances = new GatherFailConfig(0.50, 0.30, 0.10, 0.0, 0.0);
+    /** Item IDs that require smelting supervision (metallurgy inputs). */
+    public List<String> metallurgyItems = List.of(
+            "minecraft:raw_iron", "minecraft:raw_gold", "minecraft:raw_copper",
+            "minecraft:iron_ore", "minecraft:gold_ore", "minecraft:copper_ore",
+            "minecraft:deepslate_iron_ore", "minecraft:deepslate_gold_ore", "minecraft:deepslate_copper_ore",
+            "minecraft:ancient_debris", "minecraft:clay_ball", "minecraft:clay"
+    );
+    /** Per-item minimum smelting tier overrides (item ID -> required tier). */
+    public Map<String, Integer> smeltingRecipeTiers = new HashMap<>();
+    /** Per-item output yields by tier (item ID -> [yield at tier 0, 1, 2]). */
+    public Map<String, List<Integer>> smeltingTierYields = new HashMap<>();
+
+    // --------------------------------------------------
+    // Cooking knowledge (supervised furnace/smoker jobs)
+    // --------------------------------------------------
+
+    public List<String> _comment_cooking = List.of(
+            "=== Cooking Knowledge ===",
+            "Cooking is a 3-tier supervised job for food furnace/smoker recipes.",
+            "Uses the same supervision system as smelting (grace timer, collection window, etc.).",
+            "",
+            "cookingAppliesToCampfire: Whether campfire cooking requires supervision.",
+            "  Default: false (campfires have no GUI to supervise).",
+            "",
+            "cookingSpecialOutputs: Data-driven special food results at higher tiers.",
+            "  Each entry has: inputItemId, requiredTier, outputItemId, chancePerTier."
+    );
+
+    /** Whether cooking supervision is enabled. */
+    public boolean cookingEnabled = true;
+    /** Grace period ticks when the player closes the furnace/smoker UI. */
+    public int cookingGraceTimeTicks = 100;
+    /** Collection window ticks after cooking completes. */
+    public int cookingCollectionWindowTicks = 100;
+    /** Behavior on grace expiry: "FAIL" or "RESET_PROGRESS". */
+    public String cookingLeaveBehaviour = "FAIL";
+    /** Whether campfire cooking requires supervision. */
+    public boolean cookingAppliesToCampfire = false;
+    /** Fail chances per cooking tier (0-2). */
+    public GatherFailConfig cookingFailChances = new GatherFailConfig(0.40, 0.25, 0.10, 0.0, 0.0);
+    /** Item IDs that require cooking supervision (food inputs). */
+    public List<String> cookingItems = List.of(
+            "minecraft:beef", "minecraft:porkchop", "minecraft:chicken",
+            "minecraft:mutton", "minecraft:rabbit", "minecraft:cod",
+            "minecraft:salmon", "minecraft:potato", "minecraft:kelp"
+    );
+    /** Special cooking outputs (data-driven, like Royal Honey for cooking). */
+    public List<CookingSpecialOutput> cookingSpecialOutputs = new ArrayList<>();
+
+    public static class CookingSpecialOutput {
+        /** The input item that can produce a special result. */
+        public String inputItemId = "";
+        /** Minimum cooking tier required for the special result. */
+        public int requiredTier = 1;
+        /** The special output item ID. */
+        public String outputItemId = "";
+        /** Chance of special output per cooking tier [tier0, tier1, tier2]. */
+        public double[] chancePerTier = new double[] { 0.0, 0.10, 0.25 };
+
+        public CookingSpecialOutput() {}
+
+        public CookingSpecialOutput(String inputItemId, int requiredTier, String outputItemId,
+                                     double[] chancePerTier) {
+            this.inputItemId = inputItemId;
+            this.requiredTier = requiredTier;
+            this.outputItemId = outputItemId;
+            this.chancePerTier = chancePerTier;
+        }
+    }
+
+    // --------------------------------------------------
+    // Ore respawning
+    // --------------------------------------------------
+
+    public List<String> _comment_oreRespawn = List.of(
+            "=== Ore Respawning ===",
+            "When a natural ore is mined, it is replaced by a placeholder block.",
+            "After a configurable delay, the ore returns (if the placeholder is intact).",
+            "",
+            "oreRespawnEnabled: Master toggle. Default: false (disabled).",
+            "oreRespawnDelayTicks: Ticks before the ore respawns (72000 = 1 hour).",
+            "oreRespawnMaxCount: Max times an ore position can respawn. -1 = unlimited.",
+            "orePlaceholderMap: Maps ore block IDs to placeholder block IDs.",
+            "respawnableOres: List of ore block IDs that can respawn.",
+            "",
+            "Player-placed ores never respawn. Breaking the placeholder cancels respawning."
+    );
+
+    /** Whether ore respawning is enabled. */
+    public boolean oreRespawnEnabled = false;
+    /** Delay in ticks before an ore respawns. */
+    public int oreRespawnDelayTicks = 72000;
+    /** Max number of respawns per ore position (-1 = unlimited). */
+    public int oreRespawnMaxCount = -1;
+    /** Maps ore block IDs to their placeholder block IDs. */
+    public Map<String, String> orePlaceholderMap = defaultOrePlaceholderMap();
+    /** List of ore block IDs that can respawn. */
+    public List<String> respawnableOres = List.of(
+            "minecraft:coal_ore", "minecraft:iron_ore", "minecraft:gold_ore",
+            "minecraft:diamond_ore", "minecraft:lapis_ore", "minecraft:redstone_ore",
+            "minecraft:emerald_ore", "minecraft:copper_ore",
+            "minecraft:deepslate_coal_ore", "minecraft:deepslate_iron_ore",
+            "minecraft:deepslate_gold_ore", "minecraft:deepslate_diamond_ore",
+            "minecraft:deepslate_lapis_ore", "minecraft:deepslate_redstone_ore",
+            "minecraft:deepslate_emerald_ore", "minecraft:deepslate_copper_ore",
+            "minecraft:nether_gold_ore", "minecraft:nether_quartz_ore",
+            "minecraft:ancient_debris"
+    );
+
+    private static Map<String, String> defaultOrePlaceholderMap() {
+        Map<String, String> map = new HashMap<>();
+        map.put("minecraft:coal_ore", "minecraft:cobblestone");
+        map.put("minecraft:iron_ore", "minecraft:cobblestone");
+        map.put("minecraft:gold_ore", "minecraft:cobblestone");
+        map.put("minecraft:diamond_ore", "minecraft:cobblestone");
+        map.put("minecraft:lapis_ore", "minecraft:cobblestone");
+        map.put("minecraft:redstone_ore", "minecraft:cobblestone");
+        map.put("minecraft:emerald_ore", "minecraft:cobblestone");
+        map.put("minecraft:copper_ore", "minecraft:cobblestone");
+        map.put("minecraft:deepslate_coal_ore", "minecraft:cobbled_deepslate");
+        map.put("minecraft:deepslate_iron_ore", "minecraft:cobbled_deepslate");
+        map.put("minecraft:deepslate_gold_ore", "minecraft:cobbled_deepslate");
+        map.put("minecraft:deepslate_diamond_ore", "minecraft:cobbled_deepslate");
+        map.put("minecraft:deepslate_lapis_ore", "minecraft:cobbled_deepslate");
+        map.put("minecraft:deepslate_redstone_ore", "minecraft:cobbled_deepslate");
+        map.put("minecraft:deepslate_emerald_ore", "minecraft:cobbled_deepslate");
+        map.put("minecraft:deepslate_copper_ore", "minecraft:cobbled_deepslate");
+        map.put("minecraft:nether_gold_ore", "minecraft:netherrack");
+        map.put("minecraft:nether_quartz_ore", "minecraft:netherrack");
+        map.put("minecraft:ancient_debris", "minecraft:netherrack");
+        return map;
+    }
+
+    // --------------------------------------------------
+    // Crop indirect destruction
+    // --------------------------------------------------
+
+    public List<String> _comment_cropDestruction = List.of(
+            "=== Crop Indirect Destruction ===",
+            "When true, breaking the block under a crop (or trampling farmland)",
+            "always suppresses all crop/seed drops and grants no Farming XP.",
+            "Applies to all growth stages, not just mature crops."
+    );
+
+    /** Whether indirect crop destruction suppresses all drops. */
+    public boolean suppressIndirectCropDrops = true;
 
     // --------------------------------------------------
     // Load / save
@@ -550,6 +811,9 @@ public class KnowledgeBoundConfig {
             try (Reader reader = Files.newBufferedReader(path)) {
                 INSTANCE = GSON.fromJson(reader, KnowledgeBoundConfig.class);
                 KnowledgeBound.LOGGER.info("[KnowledgeBound] Loaded config from {}", path);
+                // Fill in any missing fields from new versions and re-save
+                INSTANCE.fillDefaults();
+                INSTANCE.save();
             } catch (IOException e) {
                 KnowledgeBound.LOGGER.error("[KnowledgeBound] Failed to load config, using defaults.", e);
             }
@@ -567,6 +831,64 @@ public class KnowledgeBoundConfig {
         }
     }
 
+    /**
+     * Fill null or empty fields with defaults so old config files get new fields properly.
+     * Gson may set fields to null if not present, or deserialize an empty array/map
+     * if the old config had "[]" or "{}".
+     */
+    private void fillDefaults() {
+        KnowledgeBoundConfig defaults = new KnowledgeBoundConfig();
+
+        // Gather fail configs
+        if (forestryGatherFail == null) forestryGatherFail = defaults.forestryGatherFail;
+        if (miningGatherFail == null) miningGatherFail = defaults.miningGatherFail;
+        if (diggingGatherFail == null) diggingGatherFail = defaults.diggingGatherFail;
+        if (farmingGatherFail == null) farmingGatherFail = defaults.farmingGatherFail;
+
+        // Crafting chances
+        if (craftingDiffChances == null || craftingDiffChances.length == 0)
+            craftingDiffChances = defaults.craftingDiffChances;
+
+        // Combat
+        if (combatWeaponTierOverrides == null) combatWeaponTierOverrides = defaults.combatWeaponTierOverrides;
+        if (bowSpreadPerDiff == null || bowSpreadPerDiff.length == 0)
+            bowSpreadPerDiff = defaults.bowSpreadPerDiff;
+        if (crossbowSpreadPerDiff == null || crossbowSpreadPerDiff.length == 0)
+            crossbowSpreadPerDiff = defaults.crossbowSpreadPerDiff;
+
+        // Smelting
+        if (smeltingBaseMinutes == null || smeltingBaseMinutes.length == 0)
+            smeltingBaseMinutes = defaults.smeltingBaseMinutes;
+        if (smeltingFailChances == null) smeltingFailChances = defaults.smeltingFailChances;
+        if (metallurgyItems == null || metallurgyItems.isEmpty())
+            metallurgyItems = defaults.metallurgyItems;
+        if (smeltingRecipeTiers == null) smeltingRecipeTiers = defaults.smeltingRecipeTiers;
+        if (smeltingTierYields == null) smeltingTierYields = defaults.smeltingTierYields;
+        if (smeltingLeaveBehaviour == null) smeltingLeaveBehaviour = defaults.smeltingLeaveBehaviour;
+
+        // Cooking
+        if (cookingFailChances == null) cookingFailChances = defaults.cookingFailChances;
+        if (cookingItems == null || cookingItems.isEmpty())
+            cookingItems = defaults.cookingItems;
+        if (cookingSpecialOutputs == null) cookingSpecialOutputs = defaults.cookingSpecialOutputs;
+        if (cookingLeaveBehaviour == null) cookingLeaveBehaviour = defaults.cookingLeaveBehaviour;
+
+        // Ore respawn
+        if (respawnableOres == null || respawnableOres.isEmpty())
+            respawnableOres = defaults.respawnableOres;
+        if (orePlaceholderMap == null || orePlaceholderMap.isEmpty())
+            orePlaceholderMap = defaults.orePlaceholderMap;
+
+        // Messages
+        if (messages == null) messages = defaults.messages;
+
+        // Extra block lists (these CAN be empty on purpose, so only fill if null)
+        if (extraForestryBlocks == null) extraForestryBlocks = defaults.extraForestryBlocks;
+        if (extraMiningBlocks == null) extraMiningBlocks = defaults.extraMiningBlocks;
+        if (extraDiggingBlocks == null) extraDiggingBlocks = defaults.extraDiggingBlocks;
+        if (extraFarmingBlocks == null) extraFarmingBlocks = defaults.extraFarmingBlocks;
+    }
+
     public void save() {
         Path configDir = FabricLoader.getInstance().getConfigDir();
         Path path = configDir.resolve("knowledgebound.json");
@@ -578,6 +900,84 @@ public class KnowledgeBoundConfig {
             KnowledgeBound.LOGGER.info("[KnowledgeBound] Saved config to {}", path);
         } catch (IOException e) {
             KnowledgeBound.LOGGER.error("[KnowledgeBound] Failed to save config.", e);
+        }
+    }
+
+    // --------------------------------------------------
+    // Reflection-based config access
+    // --------------------------------------------------
+
+    /**
+     * Get a config value by dot-separated path (e.g. "messages.learning", "blockVillagerSpawns").
+     * Uses reflection to traverse nested objects. Returns the JSON representation.
+     */
+    public String getFieldValue(String path) {
+        try {
+            String[] parts = path.split("\\.");
+            Object current = this;
+            for (String part : parts) {
+                if (part.startsWith("_comment")) return null;
+                java.lang.reflect.Field field = current.getClass().getField(part);
+                current = field.get(current);
+            }
+            return GSON.toJson(current);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Set a config value by dot-separated path. The value string is parsed as JSON for
+     * complex types (arrays, objects, numbers, booleans), or as a raw string for String fields.
+     */
+    public boolean setFieldValue(String path, String value) {
+        try {
+            String[] parts = path.split("\\.");
+            Object current = this;
+            for (int i = 0; i < parts.length - 1; i++) {
+                java.lang.reflect.Field field = current.getClass().getField(parts[i]);
+                current = field.get(current);
+            }
+            String lastPart = parts[parts.length - 1];
+            if (lastPart.startsWith("_comment")) return false;
+            java.lang.reflect.Field field = current.getClass().getField(lastPart);
+            Class<?> type = field.getType();
+
+            if (type == String.class) {
+                field.set(current, value);
+            } else {
+                Object parsed = GSON.fromJson(value, field.getGenericType());
+                field.set(current, parsed);
+            }
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * List all settable config field paths (excluding comment fields).
+     */
+    public static java.util.List<String> allConfigKeys() {
+        java.util.List<String> keys = new java.util.ArrayList<>();
+        collectKeys("", KnowledgeBoundConfig.class, keys, 0);
+        return keys;
+    }
+
+    private static void collectKeys(String prefix, Class<?> clazz, java.util.List<String> keys, int depth) {
+        if (depth > 2) return; // prevent infinite recursion
+        for (java.lang.reflect.Field f : clazz.getFields()) {
+            if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+            if (f.getName().startsWith("_comment")) continue;
+            String fullPath = prefix.isEmpty() ? f.getName() : prefix + "." + f.getName();
+            Class<?> type = f.getType();
+            // Recurse into our own nested config classes
+            if (type == MessagesConfig.class || type == ArmorTierConfig.class
+                    || type == BetterHoneyConfig.class || type == CookingSpecialOutput.class) {
+                collectKeys(fullPath, type, keys, depth + 1);
+            } else {
+                keys.add(fullPath);
+            }
         }
     }
 }

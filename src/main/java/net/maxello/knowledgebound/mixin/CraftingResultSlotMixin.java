@@ -45,6 +45,12 @@ public abstract class CraftingResultSlotMixin extends Slot {
             return;
         }
 
+        if (KnowledgeEvents.SKIP_NEXT_ROLL.get()) {
+            KnowledgeBound.LOGGER.debug("[KB MIXIN] SKIP_NEXT_ROLL is true. Skipping this roll to prevent double-fail on shift-click.");
+            KnowledgeEvents.SKIP_NEXT_ROLL.set(false);
+            return;
+        }
+
         Identifier itemId = Registries.ITEM.getId(stack.getItem());
         KnowledgeBound.LOGGER.debug("[KB MIXIN] Item id = {}", itemId);
 

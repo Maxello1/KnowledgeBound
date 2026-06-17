@@ -559,38 +559,9 @@ public final class KnowledgeCommands {
         }
     }
 
-    private static final String[] CONFIG_KEYS = {
-            "minutesMultiplier",
-            "maxMasterMaterial",
-            "maxTier4Material",
-            "maxMasterClass",
-            "poorDurabilityFraction",
-            "blockBoats",
-            "stonecutterMinTier",
-            "stonecutterCutChanceTier1",
-            "stonecutterCutReductionPerTier",
-            "stonecutterCutDamage",
-            "silkTouchBeehiveMinTier",
-            "msg.learning",
-            "msg.levelUp",
-            "msg.craftingFail",
-            "msg.craftingLevelTooLow",
-            "msg.craftingQualityPoor",
-            "msg.craftingQualityNormal",
-            "msg.gatheringFail",
-            "msg.proficiencyLimitReached",
-            "msg.blockedCraftingItem",
-            "msg.stonecutterMinTierLimit",
-            "msg.stonecutterCutSelf",
-            "msg.silkTouchBeehiveLimit",
-            "msg.beehiveAngeredBees",
-            "msg.royalHoneyHarvested",
-            "msg.armorRestricted"
-    };
-
     private static final SuggestionProvider<ServerCommandSource> CONFIG_KEY_SUGGESTIONS =
             (ctx, builder) -> {
-                for (String key : CONFIG_KEYS) {
+                for (String key : KnowledgeBoundConfig.allConfigKeys()) {
                     builder.suggest(key);
                 }
                 return builder.buildFuture();
@@ -598,94 +569,25 @@ public final class KnowledgeCommands {
 
     private static int executeConfigGet(CommandContext<ServerCommandSource> ctx) {
         String key = StringArgumentType.getString(ctx, "key");
-        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
-        Object val = null;
-
-        switch (key) {
-            case "minutesMultiplier" -> val = cfg.minutesMultiplier;
-            case "maxMasterMaterial" -> val = cfg.maxMasterMaterial;
-            case "maxTier4Material" -> val = cfg.maxTier4Material;
-            case "maxMasterClass" -> val = cfg.maxMasterClass;
-            case "poorDurabilityFraction" -> val = cfg.poorDurabilityFraction;
-            case "blockBoats" -> val = cfg.blockBoats;
-            case "stonecutterMinTier" -> val = cfg.stonecutterMinTier;
-            case "stonecutterCutChanceTier1" -> val = cfg.stonecutterCutChanceTier1;
-            case "stonecutterCutReductionPerTier" -> val = cfg.stonecutterCutReductionPerTier;
-            case "stonecutterCutDamage" -> val = cfg.stonecutterCutDamage;
-            case "silkTouchBeehiveMinTier" -> val = cfg.silkTouchBeehiveMinTier;
-            case "msg.learning" -> val = cfg.messages.learning;
-            case "msg.levelUp" -> val = cfg.messages.levelUp;
-            case "msg.craftingFail" -> val = cfg.messages.craftingFail;
-            case "msg.craftingLevelTooLow" -> val = cfg.messages.craftingLevelTooLow;
-            case "msg.craftingQualityPoor" -> val = cfg.messages.craftingQualityPoor;
-            case "msg.craftingQualityNormal" -> val = cfg.messages.craftingQualityNormal;
-            case "msg.gatheringFail" -> val = cfg.messages.gatheringFail;
-            case "msg.proficiencyLimitReached" -> val = cfg.messages.proficiencyLimitReached;
-            case "msg.blockedCraftingItem" -> val = cfg.messages.blockedCraftingItem;
-            case "msg.stonecutterMinTierLimit" -> val = cfg.messages.stonecutterMinTierLimit;
-            case "msg.stonecutterCutSelf" -> val = cfg.messages.stonecutterCutSelf;
-            case "msg.silkTouchBeehiveLimit" -> val = cfg.messages.silkTouchBeehiveLimit;
-            case "msg.beehiveAngeredBees" -> val = cfg.messages.beehiveAngeredBees;
-            case "msg.royalHoneyHarvested" -> val = cfg.messages.royalHoneyHarvested;
-            case "msg.armorRestricted" -> val = cfg.messages.armorRestricted;
-            default -> {
-                ctx.getSource().sendError(Text.literal("Unknown config key: " + key));
-                return 0;
-            }
+        String val = KnowledgeBoundConfig.INSTANCE.getFieldValue(key);
+        if (val == null) {
+            ctx.getSource().sendError(Text.literal("Unknown config key: " + key));
+            return 0;
         }
-
-        Object finalVal = val;
-        ctx.getSource().sendFeedback(() -> Text.literal("Config key '" + key + "' = " + finalVal).formatted(Formatting.GREEN), false);
+        ctx.getSource().sendFeedback(() -> Text.literal(key + " = " + val).formatted(Formatting.GREEN), false);
         return Command.SINGLE_SUCCESS;
     }
 
     private static int executeConfigSet(CommandContext<ServerCommandSource> ctx) {
         String key = StringArgumentType.getString(ctx, "key");
         String valueStr = StringArgumentType.getString(ctx, "value");
-        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
-
-        try {
-            switch (key) {
-                case "minutesMultiplier" -> cfg.minutesMultiplier = Double.parseDouble(valueStr);
-                case "maxMasterMaterial" -> cfg.maxMasterMaterial = Integer.parseInt(valueStr);
-                case "maxTier4Material" -> cfg.maxTier4Material = Integer.parseInt(valueStr);
-                case "maxMasterClass" -> cfg.maxMasterClass = Integer.parseInt(valueStr);
-                case "poorDurabilityFraction" -> cfg.poorDurabilityFraction = Double.parseDouble(valueStr);
-                case "blockBoats" -> cfg.blockBoats = Boolean.parseBoolean(valueStr);
-                case "stonecutterMinTier" -> cfg.stonecutterMinTier = Integer.parseInt(valueStr);
-                case "stonecutterCutChanceTier1" -> cfg.stonecutterCutChanceTier1 = Double.parseDouble(valueStr);
-                case "stonecutterCutReductionPerTier" -> cfg.stonecutterCutReductionPerTier = Double.parseDouble(valueStr);
-                case "stonecutterCutDamage" -> cfg.stonecutterCutDamage = Float.parseFloat(valueStr);
-                case "silkTouchBeehiveMinTier" -> cfg.silkTouchBeehiveMinTier = Integer.parseInt(valueStr);
-                case "msg.learning" -> cfg.messages.learning = valueStr;
-                case "msg.levelUp" -> cfg.messages.levelUp = valueStr;
-                case "msg.craftingFail" -> cfg.messages.craftingFail = valueStr;
-                case "msg.craftingLevelTooLow" -> cfg.messages.craftingLevelTooLow = valueStr;
-                case "msg.craftingQualityPoor" -> cfg.messages.craftingQualityPoor = valueStr;
-                case "msg.craftingQualityNormal" -> cfg.messages.craftingQualityNormal = valueStr;
-                case "msg.gatheringFail" -> cfg.messages.gatheringFail = valueStr;
-                case "msg.proficiencyLimitReached" -> cfg.messages.proficiencyLimitReached = valueStr;
-                case "msg.blockedCraftingItem" -> cfg.messages.blockedCraftingItem = valueStr;
-                case "msg.stonecutterMinTierLimit" -> cfg.messages.stonecutterMinTierLimit = valueStr;
-                case "msg.stonecutterCutSelf" -> cfg.messages.stonecutterCutSelf = valueStr;
-                case "msg.silkTouchBeehiveLimit" -> cfg.messages.silkTouchBeehiveLimit = valueStr;
-                case "msg.beehiveAngeredBees" -> cfg.messages.beehiveAngeredBees = valueStr;
-                case "msg.royalHoneyHarvested" -> cfg.messages.royalHoneyHarvested = valueStr;
-                case "msg.armorRestricted" -> cfg.messages.armorRestricted = valueStr;
-                default -> {
-                    ctx.getSource().sendError(Text.literal("Unknown config key: " + key));
-                    return 0;
-                }
-            }
-        } catch (NumberFormatException e) {
-            ctx.getSource().sendError(Text.literal("Invalid value for key '" + key + "': " + valueStr));
+        boolean success = KnowledgeBoundConfig.INSTANCE.setFieldValue(key, valueStr);
+        if (!success) {
+            ctx.getSource().sendError(Text.literal("Failed to set '" + key + "'. Check the key name and value format."));
             return 0;
         }
-
-        // Save immediately
-        cfg.save();
-
-        ctx.getSource().sendFeedback(() -> Text.literal("Set config key '" + key + "' to: " + valueStr).formatted(Formatting.GREEN), true);
+        KnowledgeBoundConfig.INSTANCE.save();
+        ctx.getSource().sendFeedback(() -> Text.literal("Set '" + key + "' to: " + valueStr).formatted(Formatting.GREEN), true);
         return Command.SINGLE_SUCCESS;
     }
 }

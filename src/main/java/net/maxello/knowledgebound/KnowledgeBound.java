@@ -19,11 +19,19 @@ public class KnowledgeBound implements ModInitializer {
         // Load config before registries
         KnowledgeBoundConfig.load();
 
+        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
+        LOGGER.info("[KnowledgeBound] Config loaded — smeltingEnabled={}, cookingEnabled={}, metallurgyItems={}, cookingItems={}",
+                cfg.smeltingEnabled, cfg.cookingEnabled,
+                cfg.metallurgyItems != null ? cfg.metallurgyItems.size() : "NULL",
+                cfg.cookingItems != null ? cfg.cookingItems.size() : "NULL");
+
         KnowledgeRegistry.init();
         CraftingRuleRegistry.init();
         PlayerKnowledgeManager.init();
         KnowledgeEvents.init();
         KnowledgeCommands.init();
         ArmorRestrictionHandler.init();
+        SupervisedJobManager.init();
+        OreRespawnManager.init();
     }
 }

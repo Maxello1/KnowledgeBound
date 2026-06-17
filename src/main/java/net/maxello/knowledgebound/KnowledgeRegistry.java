@@ -44,6 +44,12 @@ public class KnowledgeRegistry {
     public static final Identifier BEEKEEPING_ID =
             Identifier.of(KnowledgeBound.MOD_ID, "beekeeping");
 
+    // supervised jobs (3-tier)
+    public static final Identifier SMELTING_ID =
+            Identifier.of(KnowledgeBound.MOD_ID, "smelting");
+    public static final Identifier COOKING_ID =
+            Identifier.of(KnowledgeBound.MOD_ID, "cooking");
+
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering knowledges…");
 
@@ -69,6 +75,10 @@ public class KnowledgeRegistry {
         register(createCarpentryDefinition());
         register(createMasonryDefinition());
         register(createBeekeepingDefinition());
+
+        // supervised jobs
+        register(createSmeltingDefinition());
+        register(createCookingDefinition());
     }
 
     private static void register(KnowledgeDefinition def) {
@@ -367,6 +377,46 @@ public class KnowledgeRegistry {
     private static KnowledgeDefinition createBeekeepingDefinition() {
         return new KnowledgeDefinition(
                 BEEKEEPING_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.CLASS_3_TIER,
+                3,
+                classJobMinutesPerTier(),
+                noToolTiers(),
+                List.of()
+        );
+    }
+
+    // --------------------------------------------------
+    //  Smelting (supervised job, 3 tiers)
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createSmeltingDefinition() {
+        Map<Integer, Integer> minutesPerTier = new HashMap<>();
+        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
+        double m = cfg.minutesMultiplier;
+        int[] base = cfg.smeltingBaseMinutes;
+        for (int i = 0; i < base.length; i++) {
+            minutesPerTier.put(i + 1, Math.max(1, (int) Math.round(base[i] * m)));
+        }
+
+        return new KnowledgeDefinition(
+                SMELTING_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.CLASS_3_TIER,
+                3,
+                minutesPerTier,
+                noToolTiers(),
+                List.of()
+        );
+    }
+
+    // --------------------------------------------------
+    //  Cooking (supervised job, 3 tiers)
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createCookingDefinition() {
+        return new KnowledgeDefinition(
+                COOKING_ID,
                 KnowledgeDefinition.Type.SKILL,
                 KnowledgeDefinition.JobCategory.CLASS_3_TIER,
                 3,

@@ -46,6 +46,9 @@ public class KnowledgeEvents {
      */
     public static final ThreadLocal<ItemStack> PRE_CLICK_CURSOR = new ThreadLocal<>();
 
+    /** Flag to prevent double-rolling during shift-click crafting. */
+    public static final ThreadLocal<Boolean> SKIP_NEXT_ROLL = ThreadLocal.withInitial(() -> false);
+
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering events…");
         registerBlockBreakXpAndFailure();
@@ -61,10 +64,11 @@ public class KnowledgeEvents {
                 PlayerKnowledgeManager.sendFullSync(handler.getPlayer())
         );
 
-        // Clean up scoreboard HUD state when a player leaves
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                KnowledgeScoreboardHud.onPlayerLeave(handler.getPlayer())
-        );
+        // Clean up scoreboard HUD state and supervised jobs when a player leaves
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            KnowledgeScoreboardHud.onPlayerLeave(handler.getPlayer());
+            SupervisedJobManager.onPlayerDisconnect(handler.getPlayer());
+        });
     }
 
     // ----------------------------------------------------------------------
@@ -90,33 +94,22 @@ public class KnowledgeEvents {
     private static void registerBlockBreakXpAndFailure() {
         PlayerBlockBreakEvents.BEFORE.register((world, player, pos, state, blockEntity) -> {
             if (!(player instanceof ServerPlayerEntity serverPlayer)) return true;
+            if (!(world instanceof ServerWorld serverWorld)) return true;
 
             Block block = state.getBlock();
             Identifier blockId = Registries.BLOCK.getId(block);
 
-            // 1. If block ABOVE is a mature crop, apply farming checks first
-            BlockPos abovePos = pos.up();
-            BlockState aboveState = world.getBlockState(abovePos);
-            Identifier aboveId = Registries.BLOCK.getId(aboveState.getBlock());
-            if (isMatureFarmingBlock(aboveState, aboveId)) {
-                KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FARMING_ID);
-                if (def != null) {
-                    int tier = PlayerKnowledgeManager.getTier(serverPlayer, def.getId());
-                    double failChance = getGatherFailChance(def, tier);
-                    boolean fail = RANDOM.nextDouble() < failChance;
+            // If block ABOVE has a crop (any stage), suppress drops if config says so
+            handleCropAboveDestroyed(world, serverPlayer, pos);
 
-                    if (fail) {
-                        // Destroy crop on top with no drops
-                        world.setBlockState(abovePos, Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL);
-                        serverPlayer.sendMessage(
-                                KnowledgeBoundTextFormatter.gatheringFail(def.getId()),
-                                true
-                        );
-                    } else {
-                        // Success: grant XP
-                        PlayerKnowledgeManager.grantMinuteIfAllowed(serverPlayer, def.getId());
-                    }
-                }
+            // Track player-placed block removals
+            PlayerPlacedBlockTracker.onBlockBreak(serverWorld, pos);
+
+            // Cancel ore respawn if breaking a placeholder
+            if (OreRespawnManager.isPlaceholder(serverWorld, pos)) {
+                OreRespawnManager.cancelRespawn(serverWorld, pos);
+                // Allow break but no XP for placeholder blocks
+                return true;
             }
 
             // beehive/bee nest restriction
@@ -132,7 +125,15 @@ public class KnowledgeEvents {
             } else if (isMiningBlock(blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.MINING_ID);
                 if (def != null) {
-                    return handleGatherBlock(world, serverPlayer, pos, state, def, false);
+                    boolean allowed = handleGatherBlock(world, serverPlayer, pos, state, def, false);
+                    // Schedule ore respawn if mining a natural respawnable ore
+                    if (allowed && OreRespawnManager.isRespawnableOre(state)
+                            && !PlayerPlacedBlockTracker.isPlayerPlaced(serverWorld, pos)) {
+                        // Schedule after the break is processed
+                        serverPlayer.server.execute(() ->
+                                OreRespawnManager.scheduleRespawn(serverWorld, pos, state));
+                    }
+                    return allowed;
                 }
             } else if (isDiggingBlock(blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.DIGGING_ID);
@@ -149,6 +150,68 @@ public class KnowledgeEvents {
             // not our block, let vanilla handle it
             return true;
         });
+    }
+
+    /**
+     * Called when a block below a crop is destroyed or trampled.
+     * If suppressIndirectCropDrops is enabled (default), suppresses ALL drops
+     * at ALL growth stages and grants no Farming XP.
+     * If disabled, falls back to the old mature-only fail-chance behavior.
+     */
+    public static void handleCropAboveDestroyed(World world, ServerPlayerEntity player, BlockPos basePos) {
+        if (!(world instanceof ServerWorld serverWorld)) return;
+        BlockPos abovePos = basePos.up();
+        BlockState aboveState = world.getBlockState(abovePos);
+        Block aboveBlock = aboveState.getBlock();
+
+        // Check if the block above is any crop (any growth stage)
+        boolean isCrop = aboveBlock instanceof net.minecraft.block.CropBlock
+                || aboveBlock instanceof net.minecraft.block.StemBlock
+                || aboveBlock instanceof net.minecraft.block.CocoaBlock
+                || aboveBlock instanceof net.minecraft.block.NetherWartBlock
+                || aboveBlock instanceof net.minecraft.block.SweetBerryBushBlock;
+
+        if (!isCrop) return;
+
+        if (KnowledgeBoundConfig.INSTANCE.suppressIndirectCropDrops) {
+            // Suppress ALL drops — destroy crop silently, no XP
+            world.setBlockState(abovePos, Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL);
+            player.server.execute(() -> {
+                Box area = new Box(abovePos).expand(2.0);
+                for (net.minecraft.entity.ItemEntity itemEntity : serverWorld.getEntitiesByClass(
+                        net.minecraft.entity.ItemEntity.class, area, e -> e.age <= 2)) {
+                    itemEntity.discard();
+                }
+            });
+            return; // No XP, no drops
+        }
+
+        // Legacy behavior: only apply fail chance to mature crops
+        Identifier aboveId = Registries.BLOCK.getId(aboveBlock);
+        if (!isMatureFarmingBlock(aboveState, aboveId)) return;
+
+        KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FARMING_ID);
+        if (def == null) return;
+
+        int tier = PlayerKnowledgeManager.getTier(player, def.getId());
+        double failChance = getGatherFailChance(def, tier);
+        boolean fail = RANDOM.nextDouble() < failChance;
+
+        if (fail) {
+            world.setBlockState(abovePos, Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL);
+            player.server.execute(() -> {
+                Box area = new Box(abovePos).expand(2.0);
+                for (net.minecraft.entity.ItemEntity itemEntity : serverWorld.getEntitiesByClass(
+                        net.minecraft.entity.ItemEntity.class, area, e -> e.age <= 2)) {
+                    itemEntity.discard();
+                }
+            });
+            player.sendMessage(
+                    KnowledgeBoundTextFormatter.gatheringFail(def.getId()),
+                    true
+            );
+        }
+        PlayerKnowledgeManager.grantMinuteIfAllowed(player, def.getId());
     }
 
     /**
@@ -378,6 +441,19 @@ public class KnowledgeEvents {
                 return true;
             }
 
+            // ---- Combat fail roll ----
+            CombatFailHelper.CombatOutcome outcome =
+                    CombatFailHelper.rollCombatOutcome(player,
+                            KnowledgeRegistry.MELEE_COMBAT_ID, held);
+
+            if (outcome == CombatFailHelper.CombatOutcome.FAIL) {
+                // Drop the weapon after the damage resolves
+                player.getServer().execute(() -> {
+                    CombatFailHelper.dropWeapon(player);
+                });
+                // Do not cancel the damage
+            }
+
             // Map the sword material to WOOD / STONE / IRON / DIAMOND, etc.
             KnowledgeDefinition.ToolTier toolTier =
                     ToolTierHelper.fromItem(held);
@@ -385,7 +461,7 @@ public class KnowledgeEvents {
             // Grant XP if this tool tier is valid for current melee tier
             grantXpIfValidTool(player, meleeDef, toolTier);
 
-            return true; // never cancel damage
+            return true; // allow damage
         });
     }
 

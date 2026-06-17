@@ -69,6 +69,10 @@ public final class CustomItemRegistry {
             // add enchantment glint (shimmer effect like enchanted golden apple)
             royalHoney.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
 
+            // custom model data so resource packs can give it a unique texture
+            royalHoney.set(DataComponentTypes.CUSTOM_MODEL_DATA,
+                    new net.minecraft.component.type.CustomModelDataComponent(cfg.royalHoneyCustomModelData));
+
             // apply potion effects via FoodComponent (not PotionContents — that only works on potions)
             List<FoodComponent.StatusEffectEntry> foodEffects = new ArrayList<>();
             for (KnowledgeBoundConfig.PotionEffectEntry entry : honeyConfig.effects) {
