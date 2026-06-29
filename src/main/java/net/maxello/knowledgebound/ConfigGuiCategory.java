@@ -199,6 +199,7 @@ public final class ConfigGuiCategory {
         )));
         register(new ConfigGuiCategory("death_loss", "Death Loss", Items.SKELETON_SKULL, List.of(
                 ConfigGuiEntry.bool("knowledgeLossOnDeathEnabled", "Loss On Death Enabled", "Master toggle for knowledge loss on death"),
+                ConfigGuiEntry.bool("knowledgeLossResetEverything", "Reset Everything", "Set to true to wipe ALL knowledge back to 0 on death"),
                 ConfigGuiEntry.decimal("knowledgeLossMinutesPercentage", "Minutes Lost Percentage", "Fraction of current minutes lost on death", 0.0, 1.0, 0.05, 0.50),
                 ConfigGuiEntry.integer("knowledgeLossTiers", "Tiers Lost", "Number of full tiers lost on death", 0, 5),
                 ConfigGuiEntry.string("knowledgeLossExemptUsernames", "Exempt Usernames", "Staff usernames exempt from death loss")

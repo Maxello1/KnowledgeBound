@@ -412,8 +412,9 @@ public class KnowledgeBoundConfig {
     public List<String> _comment_deathLoss = List.of(
             "=== Knowledge Loss on Death ===",
             "knowledgeLossOnDeathEnabled: Set to true to enable knowledge loss when a player dies.",
-            "knowledgeLossMinutesPercentage: Fraction of current minutes towards next tier lost on death (0.5 = 50% lost).",
-            "knowledgeLossTiers: Number of full tiers to lose on death (0 = only lose minutes, 1 = lose 1 full tier).",
+            "knowledgeLossResetEverything: Set to true to wipe ALL knowledge back to 0 on death (overrides percentage/tiers).",
+            "knowledgeLossMinutesPercentage: Fraction of current minutes towards next tier lost on death (used if resetEverything=false).",
+            "knowledgeLossTiers: Number of full tiers to lose on death (used if resetEverything=false).",
             "knowledgeLossExemptUsernames: List of staff usernames exempt from knowledge loss on death.",
             "  (Note: Players with LuckPerms permission 'knowledgebound.exempt.deathloss' are also exempt)."
     );
@@ -421,10 +422,13 @@ public class KnowledgeBoundConfig {
     /** Master toggle for knowledge loss on death. */
     public boolean knowledgeLossOnDeathEnabled = true;
 
-    /** Fraction of current minutes lost towards next tier (0.5 = 50%). */
+    /** If true, wipes ALL knowledge back to Tier 0, 0 minutes on death. */
+    public boolean knowledgeLossResetEverything = true;
+
+    /** Fraction of current minutes lost towards next tier (0.5 = 50%). Used if resetEverything=false. */
     public double knowledgeLossMinutesPercentage = 0.50;
 
-    /** Number of full tiers to lose on death (0 = only lose minutes). */
+    /** Number of full tiers to lose on death (0 = only lose minutes). Used if resetEverything=false. */
     public int knowledgeLossTiers = 0;
 
     /** List of staff usernames exempt from knowledge loss on death. */

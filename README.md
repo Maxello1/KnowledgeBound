@@ -643,12 +643,13 @@ KnowledgeBound fully integrates with the **Fabric Permissions API** (`me.lucko.f
 
 ## 💀 Knowledge Loss on Death & Staff Exemptions
 
-KnowledgeBound supports an optional penalty system where players lose a portion of their un-tiered knowledge progress (or full tiers) when dying.
+KnowledgeBound supports an optional penalty system where players lose their knowledge progress upon dying. By default, dying wipes all knowledge completely back to 0, forcing players to start fresh.
 
 ### Configuring Death Penalties
 - `knowledgeLossOnDeathEnabled`: Set to `true` to enable death penalties (default `true`).
-- `knowledgeLossMinutesPercentage`: Fraction of current minutes lost towards the next tier (default `0.50` / 50%).
-- `knowledgeLossTiers`: Number of full tiers lost upon dying (default `0`).
+- `knowledgeLossResetEverything`: Set to `true` to wipe ALL knowledge back to Tier 0, 0 minutes on death (default `true`).
+- `knowledgeLossMinutesPercentage`: Fraction of current minutes lost towards the next tier (used if `resetEverything` is `false`).
+- `knowledgeLossTiers`: Number of full tiers lost upon dying (used if `resetEverything` is `false`).
 
 ### Staff & Exemption Lists
 You can exempt staff members or specific players from losing knowledge on death in two ways:

@@ -271,7 +271,13 @@ public class PlayerKnowledgeManager {
             copy.lastXpMinuteIndex = entry.getValue().lastXpMinuteIndex;
 
             if (applyDeathLoss) {
-                if (cfg.knowledgeLossTiers > 0 && copy.tier > 0) {
+                if (cfg.knowledgeLossResetEverything) {
+                    if (copy.tier > 0 || copy.currentMinutes > 0) {
+                        copy.tier = 0;
+                        copy.currentMinutes = 0;
+                        lostAnything = true;
+                    }
+                } else if (cfg.knowledgeLossTiers > 0 && copy.tier > 0) {
                     copy.tier = Math.max(0, copy.tier - cfg.knowledgeLossTiers);
                     copy.currentMinutes = 0;
                     lostAnything = true;
