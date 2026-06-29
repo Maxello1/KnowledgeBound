@@ -304,7 +304,12 @@ public class KnowledgeBoundConfig {
     );
 
     /** Per-item tier overrides (e.g. "modid:custom_sword" -> 3). */
-    public Map<String, Integer> itemCraftingTierOverrides = new HashMap<>();
+    public Map<String, Integer> itemCraftingTierOverrides = new HashMap<>(Map.of(
+            "knowledgebound:good_rod", 1,
+            "knowledgebound:super_rod", 2,
+            "minecraft:good_rod", 1,
+            "minecraft:super_rod", 2
+    ));
 
     // --------------------------------------------------
     // Armor equip restrictions (tier per material / item)
@@ -375,16 +380,30 @@ public class KnowledgeBoundConfig {
     public List<String> extraFarmingBlocks  = new ArrayList<>();
 
     // --------------------------------------------------
-    // Fishing base minutes
+    // Fishing settings
     // --------------------------------------------------
 
     public List<String> _comment_fishing = List.of(
+            "=== Fishing Settings ===",
             "Base minutes for fishing tiers (before minutesMultiplier).",
-            "Fishing only has 3 tiers, so this array should have 3 entries."
+            "Fishing only has 3 tiers, so this array should have 3 entries.",
+            "",
+            "fishingFailChancePerTier: Fail chance when reeling in a fish per Fishing tier [T0, T1, T2, T3].",
+            "fishingGoodRodFailReduction: Multiplier to reduce fail chance when using good_rod (0.5 = halves fail chance).",
+            "fishingSuperRodFailReduction: Multiplier to reduce fail chance when using super_rod (0.25 = quarter fail chance)."
     );
 
     /** Base minutes for fishing tiers 1, 2, 3 (before multiplier). */
     public int[] fishingBaseMinutes = new int[] { 60, 120, 240 };
+
+    /** Fail chance per fishing tier [tier0=beginner, tier1, tier2, tier3]. Fail = no loot (fish got away). */
+    public double[] fishingFailChancePerTier = new double[] { 0.40, 0.25, 0.10, 0.05 };
+
+    /** Multiplier on fail chance when using good_rod (e.g. 0.50 means 50% of original fail chance). */
+    public double fishingGoodRodFailReduction = 0.50;
+
+    /** Multiplier on fail chance when using super_rod (e.g. 0.25 means 25% of original fail chance). */
+    public double fishingSuperRodFailReduction = 0.25;
 
     public List<String> _comment_items = List.of(
             "Extra items that should behave like vanilla tools/armor in crafting quality rules.",
@@ -392,7 +411,12 @@ public class KnowledgeBoundConfig {
     );
 
     /** Extra item IDs that should use the toolsmithing rule. */
-    public List<String> extraToolItems   = new ArrayList<>();
+    public List<String> extraToolItems   = new ArrayList<>(List.of(
+            "knowledgebound:good_rod",
+            "knowledgebound:super_rod",
+            "minecraft:good_rod",
+            "minecraft:super_rod"
+    ));
     /** Extra item IDs that should use the armor rule. */
     public List<String> extraArmorItems  = new ArrayList<>();
     /** Extra item IDs that should use the weaponsmithing rule. */

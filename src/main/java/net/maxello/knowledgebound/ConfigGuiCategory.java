@@ -191,6 +191,12 @@ public final class ConfigGuiCategory {
                 ConfigGuiEntry.string("slaughteringLootMultipliers", "Loot Multipliers", "Loot multiplier per quality [poor, normal, excellent]"),
                 ConfigGuiEntry.string("slaughteringBaseMinutes", "Base Minutes", "Minutes required per tier [T1, T2, T3]")
         )));
+        register(new ConfigGuiCategory("fishing", "Fishing", Items.FISHING_ROD, List.of(
+                ConfigGuiEntry.string("fishingFailChancePerTier", "Fail Chance Per Tier", "Fail chance per fishing tier [T0, T1, T2, T3]"),
+                ConfigGuiEntry.decimal("fishingGoodRodFailReduction", "Good Rod Fail Reduction", "Multiplier on fail chance when using Good Rod", 0.0, 1.0, 0.05, 0.25),
+                ConfigGuiEntry.decimal("fishingSuperRodFailReduction", "Super Rod Fail Reduction", "Multiplier on fail chance when using Super Rod", 0.0, 1.0, 0.05, 0.25),
+                ConfigGuiEntry.string("fishingBaseMinutes", "Base Minutes", "Minutes required per tier [T1, T2, T3]")
+        )));
     }
 
     private static void register(ConfigGuiCategory category) {

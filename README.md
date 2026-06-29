@@ -343,11 +343,27 @@ If a player equips armor they don't have the tier for, it automatically drops of
 
 Fishing has a simplified 3-tier progression:
 
-| Tier | Minutes Required |
-|:---|:---:|
-| Tier 0 → 1 | 60 min |
-| Tier 1 → 2 | 120 min |
-| Tier 2 → 3 | 240 min |
+| Tier | Minutes Required | Fail Chance |
+|:---|:---:|:---:|
+| Tier 0 | 60 min | 40% |
+| Tier 1 | 120 min | 25% |
+| Tier 2 | 240 min | 10% |
+| Tier 3 | Maxed | 5% |
+
+### Fishing Fail Mechanics
+When reeling in a successful bite, there is a chance the fish gets away based on your Fishing tier. If you fail, the bobber retracts normally and you see the message *"The fish got away..."* but you still gain Fishing XP for the attempt.
+
+### Custom Fishing Rods (Datapack Integration)
+Two advanced fishing rods exist via datapack integration and are gated behind Toolsmithing knowledge:
+- **Good Fishing Rod (`good_rod`)**: Requires Toolsmithing Tier 1 (Stone/Copper tier) to craft. Reduces fishing fail chance by 50% (e.g., T0 fail goes from 40% → 20%).
+- **Super Fishing Rod (`super_rod`)**: Requires Toolsmithing Tier 2 (Iron tier) to craft. Reduces fishing fail chance by 75% (e.g., T0 fail goes from 40% → 10%).
+
+---
+
+## ☕ Planned Features
+
+### Tea Brewing & Alcohol Brewing
+Upcoming versions will introduce dedicated progression and supervision mechanics for **Tea Brewing** and **Alcohol Brewing**, expanding the culinary and apothecary systems with custom potables, aging barrels, and unique status effects.
 
 ---
 
