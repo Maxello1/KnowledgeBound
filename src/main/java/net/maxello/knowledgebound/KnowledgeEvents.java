@@ -77,7 +77,7 @@ public class KnowledgeEvents {
 
     private static void registerRespawnRestore() {
         ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
-            PlayerKnowledgeManager.copyData(oldPlayer, newPlayer);
+            PlayerKnowledgeManager.copyData(oldPlayer, newPlayer, alive);
 
             // Delay 1 tick — vanilla is still loading the player entity
             newPlayer.server.execute(() -> {

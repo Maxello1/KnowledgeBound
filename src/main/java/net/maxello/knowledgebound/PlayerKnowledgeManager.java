@@ -1,10 +1,13 @@
 package net.maxello.knowledgebound;
 
+import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 
 import java.util.HashMap;
@@ -239,19 +242,55 @@ public class PlayerKnowledgeManager {
      * Copy all knowledge data from the old player entity to the new one.
      * Called on respawn when vanilla creates a new ServerPlayerEntity.
      */
-    public static void copyData(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer) {
+    public static void copyData(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
         Map<Identifier, PlayerKnowledgeState> oldMap = PLAYER_DATA.get(oldPlayer.getUuid());
         if (oldMap == null || oldMap.isEmpty()) return;
+
+        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
+        boolean applyDeathLoss = !alive && cfg.knowledgeLossOnDeathEnabled;
+
+        // Check exemption by username or LuckPerms permission
+        if (applyDeathLoss) {
+            String username = newPlayer.getName().getString();
+            if (cfg.knowledgeLossExemptUsernames != null && cfg.knowledgeLossExemptUsernames.contains(username)) {
+                applyDeathLoss = false;
+            } else if (Permissions.check(newPlayer, "knowledgebound.exempt.deathloss", 0)) {
+                applyDeathLoss = false;
+            }
+        }
 
         // Deep-copy the state so old and new don't share references
         Map<Identifier, PlayerKnowledgeState> newMap = getOrCreatePlayerMap(newPlayer);
         newMap.clear();
+        boolean lostAnything = false;
+
         for (Map.Entry<Identifier, PlayerKnowledgeState> entry : oldMap.entrySet()) {
             PlayerKnowledgeState copy = new PlayerKnowledgeState();
             copy.tier = entry.getValue().tier;
             copy.currentMinutes = entry.getValue().currentMinutes;
             copy.lastXpMinuteIndex = entry.getValue().lastXpMinuteIndex;
+
+            if (applyDeathLoss) {
+                if (cfg.knowledgeLossTiers > 0 && copy.tier > 0) {
+                    copy.tier = Math.max(0, copy.tier - cfg.knowledgeLossTiers);
+                    copy.currentMinutes = 0;
+                    lostAnything = true;
+                } else if (cfg.knowledgeLossMinutesPercentage > 0 && copy.currentMinutes > 0) {
+                    int lost = (int) (copy.currentMinutes * cfg.knowledgeLossMinutesPercentage);
+                    if (lost > 0) {
+                        copy.currentMinutes = Math.max(0, copy.currentMinutes - lost);
+                        lostAnything = true;
+                    }
+                }
+            }
+
             newMap.put(entry.getKey(), copy);
+        }
+
+        if (lostAnything) {
+            newPlayer.server.execute(() -> {
+                newPlayer.sendMessage(Text.literal("You lost some knowledge due to your death...").formatted(Formatting.RED), false);
+            });
         }
     }
 

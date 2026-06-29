@@ -619,6 +619,42 @@ All commands use the `/kb` prefix. Legacy alias `/checkxp` is also available for
 | `/kb config get <key>` | Query the current value of a configuration key |
 | `/kb config set <key> <value>` | Modify a configuration key value and save it to disk immediately |
 
+### 🛡️ LuckPerms & Permissions API Support
+KnowledgeBound fully integrates with the **Fabric Permissions API** (`me.lucko.fabric.api.permissions.v0.Permissions`). If you have **LuckPerms** (or any compatible permission plugin) installed, you can fine-tune access using the following permission nodes (which fallback to standard OP levels if no plugin is installed):
+
+| Permission Node | Default OP | Description |
+|:---|:---:|:---|
+| `knowledgebound.command.base` | `0` | Access to `/kb` and `/checkxp` |
+| `knowledgebound.command.help` | `0` | Access to `/kb help` |
+| `knowledgebound.command.hud` | `0` | Access to `/kb hud` |
+| `knowledgebound.command.gui` | `0` | Access to `/kb gui` |
+| `knowledgebound.command.list` | `0` | Access to `/kb list` |
+| `knowledgebound.command.check` | `2` | Access to `/kb check <player>` |
+| `knowledgebound.command.set` | `2` | Access to `/kb set ...` |
+| `knowledgebound.command.grant` | `2` | Access to `/kb grant ...` |
+| `knowledgebound.command.give` | `2` | Access to `/kb give ...` |
+| `knowledgebound.command.reset` | `2` | Access to `/kb reset ...` |
+| `knowledgebound.command.reload` | `2` | Access to `/kb reload` |
+| `knowledgebound.command.config` | `2` | Access to `/kb config get/set` |
+| `knowledgebound.command.admin` | `2` | Access to `/kb admin` (Config GUI) |
+| `knowledgebound.exempt.deathloss` | `0` | Exempts the player from knowledge loss on death |
+
+---
+
+## 💀 Knowledge Loss on Death & Staff Exemptions
+
+KnowledgeBound supports an optional penalty system where players lose a portion of their un-tiered knowledge progress (or full tiers) when dying.
+
+### Configuring Death Penalties
+- `knowledgeLossOnDeathEnabled`: Set to `true` to enable death penalties (default `true`).
+- `knowledgeLossMinutesPercentage`: Fraction of current minutes lost towards the next tier (default `0.50` / 50%).
+- `knowledgeLossTiers`: Number of full tiers lost upon dying (default `0`).
+
+### Staff & Exemption Lists
+You can exempt staff members or specific players from losing knowledge on death in two ways:
+1. **Config Exemption List**: Paste staff usernames directly into the `knowledgeLossExemptUsernames` array in `knowledgebound.json` (or via `/kb admin`).
+2. **LuckPerms Exemption**: Grant the player/group the `knowledgebound.exempt.deathloss` permission node.
+
 ---
 
 ## 🏆 Datapack Compatibility

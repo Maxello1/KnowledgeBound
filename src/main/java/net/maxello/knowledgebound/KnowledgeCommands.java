@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.item.ItemStack;
@@ -53,22 +54,23 @@ public final class KnowledgeCommands {
 
             dispatcher.register(
                     CommandManager.literal("kb")
-                            .requires(src -> src.hasPermissionLevel(0))
+                            .requires(src -> Permissions.check(src, "knowledgebound.command.base", 0))
                             .executes(KnowledgeCommands::executeSelfCheck)
 
                             // /kb help
                             .then(CommandManager.literal("help")
+                                    .requires(src -> Permissions.check(src, "knowledgebound.command.help", 0))
                                     .executes(KnowledgeCommands::executeHelp))
 
                             // /kb check <player>
                             .then(CommandManager.literal("check")
-                                    .requires(src -> src.hasPermissionLevel(2))
+                                    .requires(src -> Permissions.check(src, "knowledgebound.command.check", 2))
                                     .then(CommandManager.argument("player", EntityArgumentType.player())
                                             .executes(KnowledgeCommands::executeCheckOther)))
 
                             // /kb set <player> <knowledge> <tier>
                             .then(CommandManager.literal("set")
-                                    .requires(src -> src.hasPermissionLevel(2))
+                                    .requires(src -> Permissions.check(src, "knowledgebound.command.set", 2))
                                     .then(CommandManager.argument("player", EntityArgumentType.player())
                                             .then(CommandManager.argument("knowledge", StringArgumentType.word())
                                                     .suggests(KNOWLEDGE_SUGGESTIONS)
@@ -77,7 +79,7 @@ public final class KnowledgeCommands {
 
                             // /kb reset <player> [knowledge]
                             .then(CommandManager.literal("reset")
-                                    .requires(src -> src.hasPermissionLevel(2))
+                                    .requires(src -> Permissions.check(src, "knowledgebound.command.reset", 2))
                                     .then(CommandManager.argument("player", EntityArgumentType.player())
                                             .executes(KnowledgeCommands::executeResetAll)
                                             .then(CommandManager.argument("knowledge", StringArgumentType.word())
@@ -86,24 +88,27 @@ public final class KnowledgeCommands {
 
                             // /kb reload
                             .then(CommandManager.literal("reload")
-                                    .requires(src -> src.hasPermissionLevel(2))
+                                    .requires(src -> Permissions.check(src, "knowledgebound.command.reload", 2))
                                     .executes(KnowledgeCommands::executeReload))
 
                             // /kb hud — toggle sidebar (any player)
                             .then(CommandManager.literal("hud")
+                                    .requires(src -> Permissions.check(src, "knowledgebound.command.hud", 0))
                                     .executes(KnowledgeCommands::executeHud))
 
                             // /kb gui — open knowledge chest GUI
                             .then(CommandManager.literal("gui")
+                                    .requires(src -> Permissions.check(src, "knowledgebound.command.gui", 0))
                                     .executes(KnowledgeCommands::executeGui))
 
                             // /kb list — list all registered knowledges
                             .then(CommandManager.literal("list")
+                                    .requires(src -> Permissions.check(src, "knowledgebound.command.list", 0))
                                     .executes(KnowledgeCommands::executeList))
 
                             // /kb grant <player> <knowledge> <minutes>
                             .then(CommandManager.literal("grant")
-                                    .requires(src -> src.hasPermissionLevel(2))
+                                    .requires(src -> Permissions.check(src, "knowledgebound.command.grant", 2))
                                     .then(CommandManager.argument("player", EntityArgumentType.player())
                                             .then(CommandManager.argument("knowledge", StringArgumentType.word())
                                                     .suggests(KNOWLEDGE_SUGGESTIONS)
@@ -112,14 +117,14 @@ public final class KnowledgeCommands {
 
                             // /kb give <item> — give a custom KB item to yourself
                             .then(CommandManager.literal("give")
-                                    .requires(src -> src.hasPermissionLevel(2))
+                                    .requires(src -> Permissions.check(src, "knowledgebound.command.give", 2))
                                     .then(CommandManager.argument("item", StringArgumentType.word())
                                             .suggests(CUSTOM_ITEM_SUGGESTIONS)
                                             .executes(KnowledgeCommands::executeGive)))
 
                             // /kb config get <key> / set <key> <value>
                             .then(CommandManager.literal("config")
-                                    .requires(src -> src.hasPermissionLevel(2))
+                                    .requires(src -> Permissions.check(src, "knowledgebound.command.config", 2))
                                     .then(CommandManager.literal("get")
                                             .then(CommandManager.argument("key", StringArgumentType.word())
                                                     .suggests(CONFIG_KEY_SUGGESTIONS)
@@ -132,14 +137,14 @@ public final class KnowledgeCommands {
 
                             // /kb admin — open config GUI
                             .then(CommandManager.literal("admin")
-                                    .requires(src -> src.hasPermissionLevel(2))
+                                    .requires(src -> Permissions.check(src, "knowledgebound.command.admin", 2))
                                     .executes(KnowledgeCommands::executeAdmin))
             );
 
             // /checkxp — legacy alias for /kb
             dispatcher.register(
                     CommandManager.literal("checkxp")
-                            .requires(src -> src.hasPermissionLevel(0))
+                            .requires(src -> Permissions.check(src, "knowledgebound.command.base", 0))
                             .executes(KnowledgeCommands::executeSelfCheck)
             );
         });

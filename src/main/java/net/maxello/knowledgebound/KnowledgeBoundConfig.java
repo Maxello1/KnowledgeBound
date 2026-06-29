@@ -405,6 +405,31 @@ public class KnowledgeBoundConfig {
     /** Multiplier on fail chance when using super_rod (e.g. 0.25 means 25% of original fail chance). */
     public double fishingSuperRodFailReduction = 0.25;
 
+    // --------------------------------------------------
+    // Knowledge Loss on Death
+    // --------------------------------------------------
+
+    public List<String> _comment_deathLoss = List.of(
+            "=== Knowledge Loss on Death ===",
+            "knowledgeLossOnDeathEnabled: Set to true to enable knowledge loss when a player dies.",
+            "knowledgeLossMinutesPercentage: Fraction of current minutes towards next tier lost on death (0.5 = 50% lost).",
+            "knowledgeLossTiers: Number of full tiers to lose on death (0 = only lose minutes, 1 = lose 1 full tier).",
+            "knowledgeLossExemptUsernames: List of staff usernames exempt from knowledge loss on death.",
+            "  (Note: Players with LuckPerms permission 'knowledgebound.exempt.deathloss' are also exempt)."
+    );
+
+    /** Master toggle for knowledge loss on death. */
+    public boolean knowledgeLossOnDeathEnabled = true;
+
+    /** Fraction of current minutes lost towards next tier (0.5 = 50%). */
+    public double knowledgeLossMinutesPercentage = 0.50;
+
+    /** Number of full tiers to lose on death (0 = only lose minutes). */
+    public int knowledgeLossTiers = 0;
+
+    /** List of staff usernames exempt from knowledge loss on death. */
+    public List<String> knowledgeLossExemptUsernames = new ArrayList<>(List.of("StaffUsernameHere"));
+
     public List<String> _comment_items = List.of(
             "Extra items that should behave like vanilla tools/armor in crafting quality rules.",
             "Use full item IDs like \"modid:my_wooden_sword\" or \"modid:my_iron_helmet\"."
