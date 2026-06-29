@@ -50,6 +50,18 @@ public class KnowledgeRegistry {
     public static final Identifier COOKING_ID =
             Identifier.of(KnowledgeBound.MOD_ID, "cooking");
 
+    // husbandry (3-tier)
+    public static final Identifier HUSBANDRY_ID =
+            Identifier.of(KnowledgeBound.MOD_ID, "husbandry");
+
+    // jeweller (3-tier)
+    public static final Identifier JEWELLER_ID =
+            Identifier.of(KnowledgeBound.MOD_ID, "jeweller");
+
+    // slaughtering (3-tier)
+    public static final Identifier SLAUGHTERING_ID =
+            Identifier.of(KnowledgeBound.MOD_ID, "slaughtering");
+
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering knowledges…");
 
@@ -79,6 +91,15 @@ public class KnowledgeRegistry {
         // supervised jobs
         register(createSmeltingDefinition());
         register(createCookingDefinition());
+
+        // husbandry
+        register(createHusbandryDefinition());
+
+        // jeweller
+        register(createJewellerDefinition());
+
+        // slaughtering
+        register(createSlaughteringDefinition());
     }
 
     private static void register(KnowledgeDefinition def) {
@@ -421,6 +442,62 @@ public class KnowledgeRegistry {
                 KnowledgeDefinition.JobCategory.CLASS_3_TIER,
                 3,
                 classJobMinutesPerTier(),
+                noToolTiers(),
+                List.of()
+        );
+    }
+
+    // --------------------------------------------------
+    //  Husbandry (class job, 3 tiers)
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createHusbandryDefinition() {
+        return new KnowledgeDefinition(
+                HUSBANDRY_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.CLASS_3_TIER,
+                3,
+                classJobMinutesPerTier(),
+                noToolTiers(),
+                List.of()
+        );
+    }
+
+    // --------------------------------------------------
+    //  Jeweller (class job, 3 tiers)
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createJewellerDefinition() {
+        return new KnowledgeDefinition(
+                JEWELLER_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.CLASS_3_TIER,
+                3,
+                classJobMinutesPerTier(),
+                noToolTiers(),
+                List.of()
+        );
+    }
+
+    // --------------------------------------------------
+    //  Slaughtering (class job, 3 tiers)
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createSlaughteringDefinition() {
+        Map<Integer, Integer> minutesPerTier = new HashMap<>();
+        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
+        double m = cfg.minutesMultiplier;
+        int[] base = cfg.slaughteringBaseMinutes;
+        for (int i = 0; i < base.length; i++) {
+            minutesPerTier.put(i + 1, Math.max(1, (int) Math.round(base[i] * m)));
+        }
+
+        return new KnowledgeDefinition(
+                SLAUGHTERING_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.CLASS_3_TIER,
+                3,
+                minutesPerTier,
                 noToolTiers(),
                 List.of()
         );

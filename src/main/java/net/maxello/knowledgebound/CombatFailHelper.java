@@ -66,8 +66,7 @@ public final class CombatFailHelper {
      */
     public static int getWeaponRequiredTier(ItemStack stack) {
         if (stack.isEmpty()) return 0;
-        Identifier itemId = Registries.ITEM.getId(stack.getItem());
-        String itemIdStr = itemId.toString();
+        String itemIdStr = KbIdHelper.getKbId(stack);
 
         // Check config overrides first
         Map<String, Integer> overrides = KnowledgeBoundConfig.INSTANCE.combatWeaponTierOverrides;
@@ -76,7 +75,7 @@ public final class CombatFailHelper {
         }
 
         // Fall back to crafting tier registry
-        return CraftingRuleRegistry.getItemTier(itemId);
+        return CraftingRuleRegistry.getItemTier(Identifier.of(itemIdStr));
     }
 
     /**

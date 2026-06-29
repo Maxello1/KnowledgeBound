@@ -51,7 +51,7 @@ public abstract class CraftingResultSlotMixin extends Slot {
             return;
         }
 
-        Identifier itemId = Registries.ITEM.getId(stack.getItem());
+        Identifier itemId = Identifier.of(net.maxello.knowledgebound.KbIdHelper.getKbId(stack));
         KnowledgeBound.LOGGER.debug("[KB MIXIN] Item id = {}", itemId);
 
         ItemStack modified = KnowledgeEvents.handleCrafting(

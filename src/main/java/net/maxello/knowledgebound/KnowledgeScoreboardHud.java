@@ -40,7 +40,12 @@ public final class KnowledgeScoreboardHud {
             "knowledgebound:fishing",
             "knowledgebound:carpentry",
             "knowledgebound:masonry",
-            "knowledgebound:beekeeping"
+            "knowledgebound:beekeeping",
+            "knowledgebound:smelting",
+            "knowledgebound:cooking",
+            "knowledgebound:husbandry",
+            "knowledgebound:jeweller",
+            "knowledgebound:slaughtering"
     );
 
     public static boolean isEnabled(ServerPlayerEntity player) {

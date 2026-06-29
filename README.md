@@ -65,6 +65,11 @@ These jobs use the standard tier-difference table. You can attempt to craft item
 | **Carpentry** | 3 | Crafting wooden items |
 | **Masonry** | 3 | Crafting stone/brick items, using stonecutter |
 | **Beekeeping** | 3 | Harvesting honey/honeycomb from beehives |
+| **Smelting** | 3 | Smelting ore in furnaces and blast furnaces |
+| **Cooking** | 3 | Cooking food in furnaces, smokers, and campfires |
+| **Husbandry** | 3 | Taming, breeding, shearing, milking, and riding animals |
+| **Jeweller** | 3 | Crafting jewelry, applying armor trims, socketing gems |
+| **Slaughtering** | 3 | Dissecting mob corpses with an axe or cleaver |
 
 ### Gathering (5-Tier)
 | Job | Max Tier | XP Source |
@@ -255,6 +260,50 @@ The stonecutter is tied to the **Masonry** knowledge:
 
 ---
 
+## 🍳 Smelting & Cooking
+
+Smelting and Cooking are **supervised jobs**:
+
+- **Active Supervision Required:** You must stay within 16 blocks of the furnace/smoker/blast furnace/campfire while it operates.
+- **Grace Period:** If you leave the area, a grace period timer starts. If you don't return before it expires, the job fails, destroying the items and producing smoke.
+- **Collection Window:** Once smelting/cooking finishes, you have a limited collection window to take the items before they ruin/burn.
+- **Better Honey/Cooking Special Outputs:** High-tier cooking offers a chance for special bonus outputs or higher nutritional yields.
+
+---
+
+## 🌾 Husbandry
+
+Husbandry manages all advanced animal interactions, locking them behind knowledge tiers:
+
+- **Taming & Breeding:** Requires specific Husbandry tiers depending on the animal type. Fails at lower tiers (with configurable item consumption/cooldowns).
+- **Milking & Shearing:** Requires Husbandry knowledge. Failing to shear can damage shears; failing to milk wastes the attempt.
+- **Mount Riding:** Riding horses, donkeys, or camels without sufficient knowledge causes the mount to buck and kick you off periodically.
+- **Egg Hatching Override:** Thrown eggs can be configured to prevent baby chicken spawns to encourage proper breeding.
+
+---
+
+## 💎 Jeweller
+
+Jeweller governs delicate crafting and ornamentation:
+
+- **Jewelry Crafting:** Items registered in `jewellerCraftingItems` require specific Jeweller tiers to craft.
+- **Smithing Table Gating:** Applying armor trims or socketing gems at the smithing table requires Jeweller knowledge. Attempting without knowledge blocks the action.
+
+---
+
+## 🥩 Slaughtering
+
+Slaughtering replaces standard mob drops with a realistic dissection mechanic:
+
+- **Corpse Spawning:** Killing an allowed mob with a cleaver spawns an inert, persistent corpse entity lying on the ground.
+- **Critical Hit Penalty:** Finishing a mob with a critical hit ruins the corpse due to excessive force, preventing corpse spawning.
+- **Dissection (Right-Click):** Use an axe or cleaver on the corpse to dissect it.
+  - **Fail Tier:** Based on slaughtering tier (80% beginner, 50% T1, 20% T2, 5% T3). Failing ruins the corpse and drops 1 rotten flesh.
+  - **Success Qualities:** Rolls between Poor (0.5× loot), Normal (1.0× loot), and Excellent (2.0× loot). Cleavers grant significantly higher excellent chances than axes.
+- **Non-Cleaver Kills:** Killing mobs without a cleaver yields only a configurable chance (default 30%) to drop vanilla loot.
+
+---
+
 ## ⚔️ Combat & Armor Mechanics
 
 ### Combat Damage Scaling
@@ -332,7 +381,7 @@ Additional items can be blocked via the `blockedCraftingItems` config array.
 
 If the mod is installed on the client, pressing **K** (default, rebindable) toggles a Knowledge HUD overlay in the top-left corner showing:
 
-- All 13 knowledge categories
+- All 18 knowledge categories
 - Current tier and max tier (e.g., `T3/5`)
 - Progress bar toward the next tier
 - Minutes remaining (e.g., `45/120m`)
@@ -352,7 +401,7 @@ Toggle a scoreboard-based sidebar showing all knowledge tiers. This is fully ser
 
 ### Knowledge Chest GUI (`/kb gui`)
 
-Opens a read-only double chest GUI displaying all 13 knowledges:
+Opens a read-only double chest GUI displaying all 18 knowledges:
 
 - Each knowledge is represented by a named item with its current tier and progress
 - Progress bars made from green/gray stained glass panes show how close you are to the next tier
@@ -449,6 +498,54 @@ Each gathering skill has its own `GatherFailConfig` with `tier0` through `tier4`
 | `betterHoney.customName` | `"Royal Honey"` | Display name |
 | `betterHoney.nameColor` | `"gold"` | Minecraft formatting color name |
 | `betterHoney.effects` | Regen II 10s, Saturation I 5s | Array of `{effectId, durationTicks, amplifier}` |
+
+### Smelting & Cooking Settings
+
+| Key | Default | Description |
+|:---|:---|:---|
+| `smeltingEnabled` / `cookingEnabled` | `true` | Master toggles for supervision systems |
+| `smeltingGraceTimeTicks` | `600` (30s) | Grace period before unattended smelting fails |
+| `smeltingCollectionWindowTicks` | `1200` (60s) | Time window to collect smelted items |
+| `cookingGraceTimeTicks` | `400` (20s) | Grace period before unattended cooking fails |
+| `cookingCollectionWindowTicks` | `600` (30s) | Time window to collect cooked food |
+| `cookingAppliesToCampfire` | `true` | Whether campfires require supervision |
+
+### Husbandry Settings
+
+| Key | Default | Description |
+|:---|:---|:---|
+| `husbandryEnabled` | `true` | Master toggle for husbandry features |
+| `husbandryBreedingEnabled` / `husbandryTamingEnabled` | `true` | Toggles for breeding and taming tier checks |
+| `husbandryBreedingConsumeItemOnFail` | `true` | Whether breeding items are lost on failure |
+| `husbandryBreedingCooldownEnabled` | `true` | Whether breeding failure incurs a cooldown |
+| `husbandryRidingEnabled` | `true` | Toggles for mount riding tier checks |
+| `husbandryRidingKickOffChance` | `0.25` | Chance to be kicked off per check interval |
+| `husbandryRidingCheckIntervalTicks` | `100` (5s) | Ticks between kick-off checks |
+| `husbandryDisableEggChickenSpawn` | `true` | Whether thrown eggs are prevented from hatching |
+
+### Jeweller Settings
+
+| Key | Default | Description |
+|:---|:---|:---|
+| `jewellerEnabled` | `true` | Master toggle for jeweller system |
+| `jewellerSmithingEnabled` | `true` | Gate smithing table trims/gems behind Jeweller |
+| `jewellerCraftingItems` | Maps item IDs to tier | Gated jewelry items |
+
+### Slaughtering Settings
+
+| Key | Default | Description |
+|:---|:---|:---|
+| `slaughteringEnabled` | `true` | Master toggle for slaughtering system |
+| `slaughteringAllMobsByDefault` | `true` | Allow all mobs to be slaughtered unless blacklisted |
+| `slaughteringMobBlacklist` / `Whitelist` | `[...]` | Blacklist/whitelist for allowed mobs |
+| `slaughteringCorpseDespawnTicks` | `6000` (5 min) | Time before a corpse entity despawns |
+| `slaughteringCleaverCustomModelData` | `2` | CustomModelData for Butcher's Cleaver |
+| `slaughteringFailChancePerTier` | `[0.80, 0.50, 0.20, 0.05]` | Fail chance per tier [T0, T1, T2, T3] |
+| `slaughteringAxeDissectionChances` | `[0.20, 0.50, 0.30]` | Axe quality chances [poor, normal, excellent] |
+| `slaughteringCleaverDissectionChances` | `[0.10, 0.40, 0.50]` | Cleaver quality chances [poor, normal, excellent] |
+| `slaughteringLootMultipliers` | `[0.5, 1.0, 2.0]` | Loot multiplier per quality [poor, normal, excellent] |
+| `slaughteringNonCleaverLootChance` | `0.3` | Chance for vanilla loot when killed without cleaver |
+| `slaughteringBaseMinutes` | `[30, 60, 120]` | Minutes required per tier [T1, T2, T3] |
 
 ### Extra Item Lists
 
@@ -556,7 +653,7 @@ The mod registers custom item tags under `data/knowledgebound/tags/item/` for to
 
 ## 🛑 Current Limitations
 
-- **Hardcoded Categories:** The 13 knowledge categories are defined in Java code. You cannot create entirely new categories (like "Sorcery") via the config — but you can add items/blocks to existing categories.
+- **Hardcoded Categories:** The 17 knowledge categories are defined in Java code. You cannot create entirely new categories (like "Sorcery") via the config — but you can add items/blocks to existing categories.
 - **Enchantment Qualities:** "Excellent" and "Master" quality crafting with fixed enchantments is planned but not yet implemented.
 
 ---

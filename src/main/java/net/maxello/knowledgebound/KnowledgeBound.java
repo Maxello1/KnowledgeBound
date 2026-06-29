@@ -33,5 +33,9 @@ public class KnowledgeBound implements ModInitializer {
         ArmorRestrictionHandler.init();
         SupervisedJobManager.init();
         OreRespawnManager.init();
+        ConfigGuiCategory.init();
+        AnimalTierRegistry.init();
+        HusbandryEvents.init();
+        SlaughteringManager.init();
     }
 }

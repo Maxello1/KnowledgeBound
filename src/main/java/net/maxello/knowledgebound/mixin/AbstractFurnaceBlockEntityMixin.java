@@ -74,7 +74,7 @@ public abstract class AbstractFurnaceBlockEntityMixin {
         ItemStack input = blockEntity.getStack(0);
         if (input.isEmpty()) return;
 
-        Identifier inputId = Registries.ITEM.getId(input.getItem());
+        Identifier inputId = Identifier.of(net.maxello.knowledgebound.KbIdHelper.getKbId(input));
         SupervisedJob.JobType jobType = SupervisedJobManager.getJobTypeForItem(inputId);
         if (jobType == null) return; // Not a supervised item, vanilla handles it
 

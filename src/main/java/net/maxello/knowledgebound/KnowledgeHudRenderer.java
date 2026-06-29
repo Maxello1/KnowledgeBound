@@ -28,7 +28,12 @@ public final class KnowledgeHudRenderer {
             "knowledgebound:fishing",
             "knowledgebound:carpentry",
             "knowledgebound:masonry",
-            "knowledgebound:beekeeping"
+            "knowledgebound:beekeeping",
+            "knowledgebound:smelting",
+            "knowledgebound:cooking",
+            "knowledgebound:husbandry",
+            "knowledgebound:jeweller",
+            "knowledgebound:slaughtering"
     );
 
     private static final int PANEL_X       = 6;

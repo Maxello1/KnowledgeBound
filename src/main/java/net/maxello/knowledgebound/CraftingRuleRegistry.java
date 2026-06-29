@@ -23,6 +23,7 @@ public class CraftingRuleRegistry {
         registerWeaponRules();
         registerCarpentryRules();
         registerMasonryRules();
+        registerJewellerRules();
         registerBlockedItems();
         loadConfigOverrides();
     }
@@ -693,6 +694,43 @@ public class CraftingRuleRegistry {
                 ITEM_TIERS.putIfAbsent(id, 0);
             } catch (Exception e) {
                 KnowledgeBound.LOGGER.warn("[KnowledgeBound] Invalid extraMasonryItems id: {}", idStr);
+            }
+        }
+    }
+
+    // --------------------------------------------------
+    //  Jeweller (class job, 3 tiers — fully config-driven)
+    // --------------------------------------------------
+
+    private static void registerJewellerRules() {
+        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
+        if (!cfg.jewellerEnabled) return;
+
+        CraftingKnowledgeRule rule = new CraftingKnowledgeRule(
+                Identifier.of(KnowledgeBound.MOD_ID, "jeweller_crafting"),
+                KnowledgeRegistry.JEWELLER_ID,
+                0.10
+        );
+
+        // All items come from config — nothing hardcoded
+        for (Map.Entry<String, Integer> entry : cfg.jewellerCraftingItems.entrySet()) {
+            try {
+                Identifier id = Identifier.of(entry.getKey());
+                RULES_BY_ITEM.put(id, rule);
+                ITEM_TIERS.put(id, entry.getValue());
+            } catch (Exception e) {
+                KnowledgeBound.LOGGER.warn("[KnowledgeBound] Invalid jewellerCraftingItems id: {}", entry.getKey());
+            }
+        }
+
+        // Extra jeweller items from config (tier defaults to 0)
+        for (String idStr : cfg.extraJewellerItems) {
+            try {
+                Identifier id = Identifier.of(idStr);
+                RULES_BY_ITEM.put(id, rule);
+                ITEM_TIERS.putIfAbsent(id, 0);
+            } catch (Exception e) {
+                KnowledgeBound.LOGGER.warn("[KnowledgeBound] Invalid extraJewellerItems id: {}", idStr);
             }
         }
     }

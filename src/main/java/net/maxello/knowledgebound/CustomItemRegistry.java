@@ -23,7 +23,7 @@ public final class CustomItemRegistry {
     private CustomItemRegistry() {}
 
     /** All known custom item IDs. */
-    private static final List<String> ITEM_IDS = List.of("royal_honey");
+    private static final List<String> ITEM_IDS = List.of("royal_honey", "cleaver");
 
     /** Get all registered custom item IDs. */
     public static List<String> allIds() {
@@ -37,6 +37,7 @@ public final class CustomItemRegistry {
     public static ItemStack create(String id) {
         return switch (id) {
             case "royal_honey" -> createRoyalHoney();
+            case "cleaver" -> createCleaver();
             default -> null;
         };
     }
@@ -45,6 +46,7 @@ public final class CustomItemRegistry {
     public static String displayName(String id) {
         return switch (id) {
             case "royal_honey" -> "Royal Honey";
+            case "cleaver" -> "Butcher's Cleaver";
             default -> id;
         };
     }
@@ -108,6 +110,41 @@ public final class CustomItemRegistry {
         } catch (Exception e) {
             KnowledgeBound.LOGGER.warn("[KnowledgeBound] Failed to create Royal Honey item", e);
             return new ItemStack(Items.HONEY_BOTTLE); // fallback
+        }
+    }
+
+    /**
+     * Creates a Butcher's Cleaver item based on an Iron Axe with custom model data.
+     */
+    public static ItemStack createCleaver() {
+        KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
+
+        try {
+            ItemStack cleaver = new ItemStack(Items.IRON_AXE);
+
+            // Custom name
+            cleaver.set(DataComponentTypes.CUSTOM_NAME,
+                    Text.literal("Butcher's Cleaver").formatted(Formatting.RED));
+
+            // Custom model data for resource pack textures
+            cleaver.set(DataComponentTypes.CUSTOM_MODEL_DATA,
+                    new net.minecraft.component.type.CustomModelDataComponent(cfg.slaughteringCleaverCustomModelData));
+
+            // Add lore
+            cleaver.set(DataComponentTypes.LORE,
+                    new net.minecraft.component.type.LoreComponent(
+                            java.util.List.of(
+                                    Text.literal("A specialized tool for slaughtering").formatted(Formatting.GRAY),
+                                    Text.literal("and dissecting animal corpses.").formatted(Formatting.GRAY),
+                                    Text.literal(""),
+                                    Text.literal("Better dissection chances than an axe.").formatted(Formatting.GREEN)
+                            )
+                    ));
+
+            return cleaver;
+        } catch (Exception e) {
+            KnowledgeBound.LOGGER.warn("[KnowledgeBound] Failed to create Cleaver item", e);
+            return new ItemStack(Items.IRON_AXE); // fallback
         }
     }
 }

@@ -80,9 +80,9 @@ public final class ArmorRestrictionHandler {
         KnowledgeBoundConfig.ArmorTierConfig cfg = KnowledgeBoundConfig.INSTANCE.armorTiers;
 
         // 1) config override
-        Identifier itemId = Registries.ITEM.getId(armorItem);
-        if (itemId != null) {
-            Integer override = cfg.extraItemTiers.get(itemId.toString());
+        String itemIdStr = KbIdHelper.getKbId(stack);
+        if (!itemIdStr.isEmpty()) {
+            Integer override = cfg.extraItemTiers.get(itemIdStr);
             if (override != null) {
                 return override;
             }

@@ -129,6 +129,11 @@ public final class KnowledgeCommands {
                                                     .suggests(CONFIG_KEY_SUGGESTIONS)
                                                     .then(CommandManager.argument("value", StringArgumentType.greedyString())
                                                             .executes(KnowledgeCommands::executeConfigSet)))))
+
+                            // /kb admin — open config GUI
+                            .then(CommandManager.literal("admin")
+                                    .requires(src -> src.hasPermissionLevel(2))
+                                    .executes(KnowledgeCommands::executeAdmin))
             );
 
             // /checkxp — legacy alias for /kb
@@ -170,7 +175,27 @@ public final class KnowledgeCommands {
                 .append(Text.literal(" — Reload config from disk [OP]").formatted(Formatting.GRAY)), false);
         src.sendFeedback(() -> Text.literal("/kb hud").formatted(Formatting.YELLOW)
                 .append(Text.literal(" — Toggle knowledge sidebar display").formatted(Formatting.GRAY)), false);
+        src.sendFeedback(() -> Text.literal("/kb admin").formatted(Formatting.YELLOW)
+                .append(Text.literal(" — Open admin config GUI [OP]").formatted(Formatting.GRAY)), false);
 
+        return Command.SINGLE_SUCCESS;
+    }
+
+    // --------------------------------------------------
+    // /kb admin
+    // --------------------------------------------------
+
+    private static int executeAdmin(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource src = ctx.getSource();
+        ServerPlayerEntity player;
+        try {
+            player = src.getPlayerOrThrow();
+        } catch (Exception e) {
+            src.sendError(Text.literal("This command can only be used by a player."));
+            return 0;
+        }
+
+        ConfigGuiHandler.openMainMenu(player);
         return Command.SINGLE_SUCCESS;
     }
 

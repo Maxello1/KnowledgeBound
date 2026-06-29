@@ -510,6 +510,234 @@ public class KnowledgeBoundConfig {
     }
 
     // --------------------------------------------------
+    // Husbandry
+    // --------------------------------------------------
+
+    public List<String> _comment_husbandry = List.of(
+            "=== Husbandry Settings ===",
+            "Controls animal breeding, taming, milking, shearing, and mount riding.",
+            "",
+            "husbandryAnimalTiers: Maps entity IDs to required Husbandry tier (0-3).",
+            "  Tier 0 = chicken, Tier 1 = pig/cat/parrot/rabbit,",
+            "  Tier 2 = cow/sheep/wolf/goat/etc, Tier 3 = horse/donkey/camel/panda/sniffer.",
+            "",
+            "Fail chances use the same GatherFailConfig format (tier0..tier4).",
+            "  Since Husbandry only has 3 tiers, tier4 is always 0.0.",
+            "",
+            "Breeding cooldowns (seconds) are indexed by animal tier.",
+            "  Vanilla default is 300s (5 min). Higher-tier animals get longer cooldowns.",
+            "  Cooldowns persist across server restarts via vanilla breedingAge.",
+            "",
+            "husbandryRidingCheckIntervalTicks: How often (in ticks) to check if a low-tier",
+            "  rider should be kicked off their mount. 100 = every 5 seconds.",
+            "",
+            "husbandryDisableEggChickenSpawn: If true, thrown eggs will never spawn baby chickens."
+    );
+
+    /** Master toggle for the entire Husbandry system. */
+    public boolean husbandryEnabled = true;
+
+    /** Maps entity IDs (e.g. 'minecraft:cow') to required Husbandry tier. */
+    public Map<String, Integer> husbandryAnimalTiers = defaultAnimalTiers();
+
+    // --- Breeding ---
+    public boolean husbandryBreedingEnabled = true;
+    public GatherFailConfig husbandryBreedingFail = new GatherFailConfig(0.50, 0.30, 0.15, 0.05, 0.0);
+    public boolean husbandryBreedingConsumeItemOnFail = true;
+    public boolean husbandryBreedingCooldownEnabled = true;
+    /** Breeding cooldown in seconds, indexed by animal tier (0-3). Vanilla is 300s. */
+    public int[] husbandryBreedingCooldownSeconds = new int[] { 300, 600, 900, 1200 };
+
+    // --- Taming ---
+    public boolean husbandryTamingEnabled = true;
+    public GatherFailConfig husbandryTamingFail = new GatherFailConfig(0.60, 0.40, 0.20, 0.05, 0.0);
+    public boolean husbandryTamingConsumeItemOnFail = true;
+
+    // --- Milking ---
+    public boolean husbandryMilkingEnabled = true;
+    public GatherFailConfig husbandryMilkingFail = new GatherFailConfig(0.40, 0.25, 0.10, 0.0, 0.0);
+    public boolean husbandryMilkingConsumeBucketOnFail = false;
+
+    // --- Shearing ---
+    public boolean husbandryShearingEnabled = true;
+    public GatherFailConfig husbandryShearingFail = new GatherFailConfig(0.40, 0.25, 0.10, 0.0, 0.0);
+    public boolean husbandryShearingDamageShearsOnFail = true;
+
+    // --- Riding ---
+    public boolean husbandryRidingEnabled = true;
+    public boolean husbandryRidingUnreliableBelowTier = true;
+    public double husbandryRidingKickOffChance = 0.15;
+    public int husbandryRidingCheckIntervalTicks = 100;
+
+    // --- Egg chicken spawn ---
+    public boolean husbandryDisableEggChickenSpawn = true;
+
+    private static Map<String, Integer> defaultAnimalTiers() {
+        Map<String, Integer> m = new HashMap<>();
+        // Tier 0
+        m.put("minecraft:chicken", 0);
+        // Tier 1
+        m.put("minecraft:parrot", 1);
+        m.put("minecraft:rabbit", 1);
+        m.put("minecraft:pig", 1);
+        m.put("minecraft:cat", 1);
+        // Tier 2
+        m.put("minecraft:sheep", 2);
+        m.put("minecraft:goat", 2);
+        m.put("minecraft:cow", 2);
+        m.put("minecraft:fox", 2);
+        m.put("minecraft:armadillo", 2);
+        m.put("minecraft:llama", 2);
+        m.put("minecraft:trader_llama", 2);
+        m.put("minecraft:ocelot", 2);
+        m.put("minecraft:wolf", 2);
+        m.put("minecraft:frog", 2);
+        // Tier 3
+        m.put("minecraft:horse", 3);
+        m.put("minecraft:donkey", 3);
+        m.put("minecraft:mule", 3);
+        m.put("minecraft:panda", 3);
+        m.put("minecraft:camel", 3);
+        m.put("minecraft:sniffer", 3);
+        return m;
+    }
+
+    // --------------------------------------------------
+    // Slaughtering
+    // --------------------------------------------------
+
+    public List<String> _comment_slaughtering = List.of(
+            "=== Slaughtering Settings ===",
+            "Controls the slaughtering and dissection system.",
+            "",
+            "When a player kills a mob with a cleaver, a corpse entity spawns",
+            "that can be dissected with an axe or cleaver for bonus loot.",
+            "",
+            "slaughteringAllMobsByDefault: If true, all mobs can be slaughtered",
+            "  unless they appear in slaughteringMobBlacklist.",
+            "  If false, only mobs in slaughteringMobWhitelist can be slaughtered.",
+            "",
+            "slaughteringFailChancePerTier: Chance of a failed dissection at each",
+            "  slaughtering tier [tier0, tier1, tier2, tier3]. Fail = no loot (rotten flesh).",
+            "  e.g. [0.80, 0.50, 0.20, 0.05] means 80% fail for beginners, 5% for masters.",
+            "",
+            "slaughteringAxeDissectionChances / slaughteringCleaverDissectionChances:",
+            "  Three values [poor, normal, excellent] that must sum to 1.0.",
+            "  These are the chances AFTER passing the fail check.",
+            "  The cleaver has better odds for excellent dissections.",
+            "",
+            "slaughteringLootMultipliers: Multiplier applied to loot drops for each",
+            "  dissection quality [poor, normal, excellent].",
+            "",
+            "slaughteringNonCleaverLootChance: Chance (0.0-1.0) that a mob killed",
+            "  WITHOUT a cleaver still drops its vanilla loot. Default 0.3 (30%).",
+            "  Set to 1.0 for vanilla behavior, 0.0 to require cleaver for all drops.",
+            "",
+            "slaughteringBaseMinutes: Minutes required to reach each tier [1, 2, 3]."
+    );
+
+    /** Master toggle for the slaughtering system. */
+    public boolean slaughteringEnabled = true;
+
+    /** If true, all mobs can be slaughtered unless blacklisted. */
+    public boolean slaughteringAllMobsByDefault = true;
+
+    /** Mobs excluded from slaughtering when allMobsByDefault is true. */
+    public List<String> slaughteringMobBlacklist = defaultSlaughteringBlacklist();
+
+    /** Mobs included in slaughtering when allMobsByDefault is false. */
+    public List<String> slaughteringMobWhitelist = new ArrayList<>();
+
+    /** Ticks before a corpse entity despawns (6000 = 5 real-time minutes). */
+    public int slaughteringCorpseDespawnTicks = 6000;
+
+    /** Custom model data value for the Butcher's Cleaver item. */
+    public int slaughteringCleaverCustomModelData = 2;
+
+    /** Fail chance per slaughtering tier [tier0=beginner, tier1, tier2, tier3]. Fail = no loot (rotten flesh). */
+    public double[] slaughteringFailChancePerTier = new double[] { 0.80, 0.50, 0.20, 0.05 };
+
+    /** Dissection quality chances when using an axe [poor, normal, excellent]. Applied after fail check passes. */
+    public double[] slaughteringAxeDissectionChances = new double[] { 0.20, 0.50, 0.30 };
+
+    /** Dissection quality chances when using a cleaver [poor, normal, excellent]. Applied after fail check passes. */
+    public double[] slaughteringCleaverDissectionChances = new double[] { 0.10, 0.40, 0.50 };
+
+    /** Loot multiplier for each dissection quality [poor, normal, excellent]. */
+    public double[] slaughteringLootMultipliers = new double[] { 0.5, 1.0, 2.0 };
+
+    /** Chance (0.0-1.0) for vanilla loot to drop when a mob is killed WITHOUT a cleaver. */
+    public double slaughteringNonCleaverLootChance = 0.3;
+
+    /** Minutes required to reach each slaughtering tier [tier 1, tier 2, tier 3]. */
+    public int[] slaughteringBaseMinutes = new int[] { 30, 60, 120 };
+
+    private static List<String> defaultSlaughteringBlacklist() {
+        List<String> list = new ArrayList<>();
+        list.add("minecraft:ender_dragon");
+        list.add("minecraft:wither");
+        list.add("minecraft:warden");
+        list.add("minecraft:iron_golem");
+        list.add("minecraft:snow_golem");
+        list.add("minecraft:villager");
+        list.add("minecraft:wandering_trader");
+        list.add("minecraft:bat");
+        list.add("minecraft:allay");
+        return list;
+    }
+
+    // --------------------------------------------------
+    // Jeweller
+    // --------------------------------------------------
+
+    public List<String> _comment_jeweller = List.of(
+            "=== Jeweller Settings ===",
+            "Controls jewelry crafting, gem socketing, and armor trims.",
+            "",
+            "jewellerCraftingItems: Maps item IDs to required Jeweller tier (0-3).",
+            "  Items listed here are gated behind the Jeweller knowledge when crafted.",
+            "  Modify this list to add/remove items controlled by the Jeweller job.",
+            "",
+            "jewellerSmithingEnabled: Gate smithing table operations (trims/gems).",
+            "jewellerMaxGemsPerTier: Max gems/trims a player can apply per Jeweller tier.",
+            "  Index 0 = tier 0, index 3 = tier 3. Default: [0, 1, 2, 3].",
+            "  Tier 0 players cannot apply any trims or gems."
+    );
+
+    /** Master toggle for the entire Jeweller system. */
+    public boolean jewellerEnabled = true;
+
+    /** Gate smithing table trim/gem operations behind Jeweller tier. */
+    public boolean jewellerSmithingEnabled = true;
+
+    /** Max gems/trims a player can apply at each Jeweller tier. */
+    public int[] jewellerMaxGemsPerTier = new int[] { 0, 1, 2, 3 };
+
+    /**
+     * Maps item IDs to required Jeweller tier for crafting table recipes.
+     * All Jeweller crafting items are defined here — nothing is hardcoded.
+     * Modify this map to control which items require the Jeweller knowledge.
+     */
+    public Map<String, Integer> jewellerCraftingItems = defaultJewellerItems();
+
+    /** Extra item IDs for the Jeweller crafting rule (appended to jewellerCraftingItems). */
+    public List<String> extraJewellerItems = new ArrayList<>();
+
+    private static Map<String, Integer> defaultJewellerItems() {
+        Map<String, Integer> m = new HashMap<>();
+        // Tier 0: basic precision/decorative items (placeholders)
+        m.put("minecraft:clock", 0);
+        m.put("minecraft:compass", 0);
+        // Tier 1: slightly more advanced
+        m.put("minecraft:spyglass", 1);
+        m.put("minecraft:recovery_compass", 1);
+        // Tier 2: expensive precision items
+        m.put("minecraft:lodestone", 2);
+        // Tier 3: reserved for custom/datapack items
+        return m;
+    }
+
+    // --------------------------------------------------
     // Configurable gameplay messages
     // --------------------------------------------------
 
@@ -559,6 +787,33 @@ public class KnowledgeBoundConfig {
 
         // Shared workstation messages
         public String furnaceBusy = "§cSomeone else is using this furnace.";
+
+        // Husbandry messages
+        public String husbandryBreedingFail = "§cYou fail to breed the animal properly.";
+        public String husbandryBreedingTierLow = "§cYou need Husbandry Tier {minTier} to breed this animal.";
+        public String husbandryTamingFail = "§cYou fail to tame this animal.";
+        public String husbandryTamingTierLow = "§cYou need Husbandry Tier {minTier} to tame this animal.";
+        public String husbandryMilkingFail = "§cYou fail to milk the animal.";
+        public String husbandryMilkingTierLow = "§cYou need Husbandry Tier {minTier} to milk this animal.";
+        public String husbandryShearingFail = "§cYou fail to shear the animal properly.";
+        public String husbandryShearingTierLow = "§cYou need Husbandry Tier {minTier} to shear this animal.";
+        public String husbandryRidingKickedOff = "§cYou are not skilled enough to control this mount!";
+        public String husbandryRidingTierLow = "§cYou need Husbandry Tier {minTier} to ride this mount properly.";
+
+        // Jeweller messages
+        public String jewellerSmithingTierLow = "§cYou need Jeweller Tier {minTier} to apply this many trims/gems.";
+        public String jewellerSmithingBlocked = "§cYou need Jeweller knowledge to use the smithing table for trims.";
+
+        // Slaughtering messages
+        public String slaughteringCorpseSpawned = "§aYou carefully slaughter the creature, leaving a corpse to dissect.";
+        public String slaughteringCorpseRuined = "§cThe corpse was ruined by the force of your critical hit!";
+        public String slaughteringNeedTool = "§cYou need an axe or cleaver to dissect this corpse.";
+        public String slaughteringDissectFail = "§c§lFailed Dissection! §r§cYou botch it completely, ruining the corpse.";
+        public String slaughteringDissectPoor = "§e§lPoor Dissection. §r§eYou salvage very little from the corpse.";
+        public String slaughteringDissectNormal = "§a§lNormal Dissection. §r§aYou dissect the corpse with reasonable skill.";
+        public String slaughteringDissectExcellent = "§6§lExcellent Dissection! §r§aYou extract the maximum yield from this corpse!";
+        public String slaughteringCorpseDespawned = "§7The corpse has rotted away...";
+        public String slaughteringNotCleaver = "§cYou need to use a cleaver to slaughter this creature.";
     }
 
     // --------------------------------------------------
@@ -887,6 +1142,37 @@ public class KnowledgeBoundConfig {
         if (extraMiningBlocks == null) extraMiningBlocks = defaults.extraMiningBlocks;
         if (extraDiggingBlocks == null) extraDiggingBlocks = defaults.extraDiggingBlocks;
         if (extraFarmingBlocks == null) extraFarmingBlocks = defaults.extraFarmingBlocks;
+
+        // Husbandry
+        if (husbandryAnimalTiers == null || husbandryAnimalTiers.isEmpty())
+            husbandryAnimalTiers = defaults.husbandryAnimalTiers;
+        if (husbandryBreedingFail == null) husbandryBreedingFail = defaults.husbandryBreedingFail;
+        if (husbandryTamingFail == null) husbandryTamingFail = defaults.husbandryTamingFail;
+        if (husbandryMilkingFail == null) husbandryMilkingFail = defaults.husbandryMilkingFail;
+        if (husbandryShearingFail == null) husbandryShearingFail = defaults.husbandryShearingFail;
+        if (husbandryBreedingCooldownSeconds == null || husbandryBreedingCooldownSeconds.length == 0)
+            husbandryBreedingCooldownSeconds = defaults.husbandryBreedingCooldownSeconds;
+
+        // Jeweller
+        if (jewellerCraftingItems == null || jewellerCraftingItems.isEmpty())
+            jewellerCraftingItems = defaults.jewellerCraftingItems;
+        if (jewellerMaxGemsPerTier == null || jewellerMaxGemsPerTier.length == 0)
+            jewellerMaxGemsPerTier = defaults.jewellerMaxGemsPerTier;
+        if (extraJewellerItems == null) extraJewellerItems = defaults.extraJewellerItems;
+
+        // Slaughtering
+        if (slaughteringMobBlacklist == null) slaughteringMobBlacklist = defaults.slaughteringMobBlacklist;
+        if (slaughteringMobWhitelist == null) slaughteringMobWhitelist = defaults.slaughteringMobWhitelist;
+        if (slaughteringFailChancePerTier == null || slaughteringFailChancePerTier.length == 0)
+            slaughteringFailChancePerTier = defaults.slaughteringFailChancePerTier;
+        if (slaughteringAxeDissectionChances == null || slaughteringAxeDissectionChances.length == 0)
+            slaughteringAxeDissectionChances = defaults.slaughteringAxeDissectionChances;
+        if (slaughteringCleaverDissectionChances == null || slaughteringCleaverDissectionChances.length == 0)
+            slaughteringCleaverDissectionChances = defaults.slaughteringCleaverDissectionChances;
+        if (slaughteringLootMultipliers == null || slaughteringLootMultipliers.length == 0)
+            slaughteringLootMultipliers = defaults.slaughteringLootMultipliers;
+        if (slaughteringBaseMinutes == null || slaughteringBaseMinutes.length == 0)
+            slaughteringBaseMinutes = defaults.slaughteringBaseMinutes;
     }
 
     public void save() {

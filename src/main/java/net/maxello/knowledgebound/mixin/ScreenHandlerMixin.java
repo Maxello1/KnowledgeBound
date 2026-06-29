@@ -51,12 +51,49 @@ public class ScreenHandlerMixin {
 
         ScreenHandler self = (ScreenHandler) (Object) this;
 
-        // block all interactions inside the read-only knowledge GUI
+        // block all interactions inside the read-only knowledge GUI or config admin GUI
         if (self instanceof GenericContainerScreenHandler) {
-            // check if this is our knowledge GUI by testing the title
-            // The screen handler's sync ID doesn't help, but we can check if
-            // the inventory contains our GUI marker (slot 0 has our category pane)
             try {
+                // Check slot 4 for the main menu marker (Nether Star with specific name)
+                Slot markerSlot = self.slots.get(4);
+                if (markerSlot.hasStack()) {
+                    var markerName = markerSlot.getStack().get(net.minecraft.component.DataComponentTypes.CUSTOM_NAME);
+                    if (markerName != null && markerName.getString().equals(net.maxello.knowledgebound.ConfigGuiHandler.MAIN_MENU_MARKER)) {
+                        // This is the admin config main menu
+                        net.maxello.knowledgebound.ConfigGuiHandler.handleClick(
+                                serverPlayer, net.maxello.knowledgebound.ConfigGuiHandler.MAIN_MENU_TITLE,
+                                slotIndex, button, actionType, self);
+                        ci.cancel();
+                        return;
+                    }
+                }
+
+                // Check slot 8 for category submenu marker (Nether Star in position 8)
+                Slot catMarkerSlot = self.slots.get(8);
+                if (catMarkerSlot.hasStack()) {
+                    var catMarkerName = catMarkerSlot.getStack().get(net.minecraft.component.DataComponentTypes.CUSTOM_NAME);
+                    if (catMarkerName != null) {
+                        String catNameStr = catMarkerName.getString();
+                        // Category submenus have a Nether Star at slot 8 with "§b§l<CategoryName>"
+                        // and an arrow at slot 0 with "§6§l⬅ Back"
+                        Slot backSlot = self.slots.get(0);
+                        if (backSlot.hasStack()) {
+                            var backName = backSlot.getStack().get(net.minecraft.component.DataComponentTypes.CUSTOM_NAME);
+                            if (backName != null && backName.getString().contains("Back")) {
+                                // Strip §b§l prefix to get category display name
+                                String displayName = catNameStr.replaceAll("§[0-9a-fk-or]", "");
+                                String screenTitle = net.maxello.knowledgebound.ConfigGuiHandler.CATEGORY_TITLE_PREFIX + displayName;
+                                net.maxello.knowledgebound.ConfigGuiHandler.handleClick(
+                                        serverPlayer, screenTitle,
+                                        slotIndex, button, actionType, self);
+                                ci.cancel();
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                // Knowledge progress GUI (read-only)
                 Slot firstSlot = self.slots.get(0);
                 if (firstSlot.hasStack()) {
                     ItemStack stack = firstSlot.getStack();
@@ -180,7 +217,7 @@ public class ScreenHandlerMixin {
 
         // apply crafting knowledge rules BEFORE vanilla transfers the item
         ItemStack stack = slot.getStack();
-        Identifier itemId = Registries.ITEM.getId(stack.getItem());
+        Identifier itemId = Identifier.of(net.maxello.knowledgebound.KbIdHelper.getKbId(stack));
 
         KnowledgeBound.LOGGER.debug("[KB] Shift-click craft intercepted: {}", itemId);
 

@@ -28,7 +28,7 @@ public final class KnowledgeGuiHandler {
 
     /**
      * Opens the knowledge GUI for the given player.
-     * Shows all 13 knowledges with tier, progress, and visual indicators.
+     * Shows all 18 knowledges with tier, progress, and visual indicators.
      */
     public static void open(ServerPlayerEntity player) {
         SimpleInventory inv = new SimpleInventory(54); // 6 rows = double chest
@@ -62,8 +62,17 @@ public final class KnowledgeGuiHandler {
         placeKnowledge(inv, 30, player, KnowledgeRegistry.BEEKEEPING_ID, Items.HONEYCOMB.getDefaultStack());
         fillGlass(inv, 31, 35, Formatting.AQUA);
 
-        // Rows 4-5 (slots 36-53): Decorative filler
-        for (int i = 36; i < 54; i++) {
+        // Row 4 (slots 36-44): Specialized jobs
+        placeDecor(inv, 36, Items.PURPLE_STAINED_GLASS_PANE.getDefaultStack(), "§5§lSpecialized Jobs");
+        placeKnowledge(inv, 37, player, KnowledgeRegistry.SMELTING_ID, Items.FURNACE.getDefaultStack());
+        placeKnowledge(inv, 38, player, KnowledgeRegistry.COOKING_ID, Items.CAMPFIRE.getDefaultStack());
+        placeKnowledge(inv, 39, player, KnowledgeRegistry.HUSBANDRY_ID, Items.WHEAT.getDefaultStack());
+        placeKnowledge(inv, 40, player, KnowledgeRegistry.JEWELLER_ID, Items.DIAMOND.getDefaultStack());
+        placeKnowledge(inv, 41, player, KnowledgeRegistry.SLAUGHTERING_ID, Items.BEEF.getDefaultStack());
+        fillGlass(inv, 42, 44, Formatting.DARK_PURPLE);
+
+        // Row 5 (slots 45-53): Decorative filler
+        for (int i = 45; i < 54; i++) {
             ItemStack pane = Items.GRAY_STAINED_GLASS_PANE.getDefaultStack();
             pane.set(DataComponentTypes.CUSTOM_NAME, Text.literal(" "));
             inv.setStack(i, pane);
@@ -165,6 +174,8 @@ public final class KnowledgeGuiHandler {
                 pane = Items.RED_STAINED_GLASS_PANE.getDefaultStack();
             } else if (color == Formatting.AQUA) {
                 pane = Items.LIGHT_BLUE_STAINED_GLASS_PANE.getDefaultStack();
+            } else if (color == Formatting.DARK_PURPLE) {
+                pane = Items.PURPLE_STAINED_GLASS_PANE.getDefaultStack();
             } else {
                 pane = Items.GRAY_STAINED_GLASS_PANE.getDefaultStack();
             }

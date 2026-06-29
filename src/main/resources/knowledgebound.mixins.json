@@ -21,7 +21,15 @@
         "CrossbowItemMixin",
         "FurnaceBlockInteractionMixin",
         "AbstractFurnaceBlockEntityMixin",
-        "RepairItemRecipeMixin"
+        "RepairItemRecipeMixin",
+        "AnimalInteractionMixin",
+        "MountRidingMixin",
+        "EggEntityMixin",
+        "MilkingMixin",
+        "ShearingMixin",
+        "SmithingScreenHandlerMixin",
+        "PlayerAttackCritMixin",
+        "LivingEntityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
