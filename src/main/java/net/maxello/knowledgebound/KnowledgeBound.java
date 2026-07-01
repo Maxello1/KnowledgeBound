@@ -1,4 +1,18 @@
 package net.maxello.knowledgebound;
+import net.maxello.knowledgebound.commands.KnowledgeCommands;
+import net.maxello.knowledgebound.network.KnowledgeSyncPayload;
+import net.maxello.knowledgebound.mechanics.jobs.SupervisedJobManager;
+import net.maxello.knowledgebound.mechanics.jobs.SlaughteringManager;
+import net.maxello.knowledgebound.mechanics.animals.AnimalTierRegistry;
+import net.maxello.knowledgebound.mechanics.animals.HusbandryEvents;
+import net.maxello.knowledgebound.mechanics.gathering.KnowledgeEvents;
+import net.maxello.knowledgebound.mechanics.gathering.OreRespawnManager;
+import net.maxello.knowledgebound.mechanics.combat.ArmorRestrictionHandler;
+import net.maxello.knowledgebound.mechanics.crafting.CraftingRuleRegistry;
+import net.maxello.knowledgebound.config.ConfigGuiCategory;
+import net.maxello.knowledgebound.config.KnowledgeBoundConfig;
+import net.maxello.knowledgebound.core.PlayerKnowledgeManager;
+import net.maxello.knowledgebound.core.KnowledgeRegistry;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -39,3 +53,4 @@ public class KnowledgeBound implements ModInitializer {
         SlaughteringManager.init();
     }
 }
+

@@ -1,4 +1,7 @@
 package net.maxello.knowledgebound;
+import net.maxello.knowledgebound.network.ClientKnowledgeState;
+import net.maxello.knowledgebound.network.KnowledgeSyncPayload;
+import net.maxello.knowledgebound.gui.KnowledgeHudRenderer;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -46,3 +49,4 @@ public class KnowledgeBoundClient implements ClientModInitializer {
         );
     }
 }
+

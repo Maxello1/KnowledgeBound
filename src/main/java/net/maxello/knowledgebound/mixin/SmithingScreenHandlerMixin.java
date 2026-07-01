@@ -1,5 +1,10 @@
 package net.maxello.knowledgebound.mixin;
 
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.config.KnowledgeBoundConfig;
+import net.maxello.knowledgebound.core.PlayerKnowledgeManager;
+import net.maxello.knowledgebound.core.KnowledgeRegistry;
+
 import net.maxello.knowledgebound.*;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
@@ -146,3 +151,5 @@ public abstract class SmithingScreenHandlerMixin extends ForgingScreenHandler {
         return 0;
     }
 }
+
+

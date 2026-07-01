@@ -1,5 +1,7 @@
 package net.maxello.knowledgebound.mixin;
 
+import net.maxello.knowledgebound.KnowledgeBound;
+
 import net.minecraft.entity.player.PlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,3 +21,4 @@ public abstract class PlayerEntityMixin {
         }
     }
 }
+

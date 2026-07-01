@@ -1,8 +1,8 @@
 package net.maxello.knowledgebound.mixin;
+import net.maxello.knowledgebound.mechanics.combat.CombatFailHelper;
+import net.maxello.knowledgebound.core.KnowledgeRegistry;
 
-import net.maxello.knowledgebound.CombatFailHelper;
 import net.maxello.knowledgebound.KnowledgeBound;
-import net.maxello.knowledgebound.KnowledgeRegistry;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.item.BowItem;
@@ -79,3 +79,4 @@ public class BowItemMixin {
         return originalDivergence + penalty;
     }
 }
+

@@ -1,5 +1,11 @@
 package net.maxello.knowledgebound.mixin;
 
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.mechanics.animals.AnimalTierRegistry;
+import net.maxello.knowledgebound.config.KnowledgeBoundConfig;
+import net.maxello.knowledgebound.core.PlayerKnowledgeManager;
+import net.maxello.knowledgebound.core.KnowledgeRegistry;
+
 import net.maxello.knowledgebound.*;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.CowEntity;
@@ -76,3 +82,5 @@ public abstract class MilkingMixin {
         PlayerKnowledgeManager.grantMinuteIfAllowed(serverPlayer, KnowledgeRegistry.HUSBANDRY_ID);
     }
 }
+
+

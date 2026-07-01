@@ -1,6 +1,8 @@
 package net.maxello.knowledgebound.mixin;
 
-import net.maxello.knowledgebound.SupervisedJobManager;
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.mechanics.jobs.SupervisedJobManager;
+
 import net.minecraft.block.AbstractFurnaceBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -32,3 +34,5 @@ public class FurnaceBlockInteractionMixin {
         }
     }
 }
+
+

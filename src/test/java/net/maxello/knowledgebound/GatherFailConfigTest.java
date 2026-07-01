@@ -1,5 +1,6 @@
 package net.maxello.knowledgebound;
 
+import net.maxello.knowledgebound.config.KnowledgeBoundConfig;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -47,3 +48,4 @@ class GatherFailConfigTest {
         }
     }
 }
+

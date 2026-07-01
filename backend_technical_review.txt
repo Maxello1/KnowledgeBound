@@ -1,0 +1,123 @@
+KnowledgeBound Backend Technical Review & Mechanics Breakdown
+
+This document provides a detailed breakdown of how the KnowledgeBound backend operates, specifically highlighting the event flow ("before this and after that"), mixin injections, and logic checks for every major feature. 
+
+=======================================================
+1. CORE XP & PROGRESSION TRACKING
+=======================================================
+How it works:
+Unlike vanilla XP, KnowledgeBound uses real-time tracking based on `System.currentTimeMillis()`.
+
+- Before XP Granted: The system checks `PlayerKnowledgeManager`. It verifies if the player has reached their proficiency limit (e.g., max 1 Material job at Tier 5). If they have, XP gain is blocked.
+- Cooldown Check: The system compares the current time to the player's last XP timestamp for that specific knowledge. If less than 60 seconds (1 minute) have passed, no XP is awarded. 
+- After XP Granted: If valid, the player's stored time increases by 1 minute. If this pushes them over the tier threshold, they level up. The server then dispatches a `KnowledgeSyncPayload` packet to the client to update the HUD overlay.
+
+=======================================================
+2. GATHERING MECHANICS (Mining, Forestry, Digging, Farming)
+=======================================================
+How it works:
+Gathering is primarily handled via Fabric's `PlayerBlockBreakEvents.BEFORE`.
+
+- Before Block Break: 
+  1. The event listener in `KnowledgeEvents.java` checks if the block broken is a tracked block (e.g., Log, Stone, Mature Crop).
+  2. It checks `PlayerPlacedBlockTracker` to ensure the block wasn't placed by a player (prevents XP farming).
+  3. It verifies the tool used matches the required tier for the player's current knowledge level (e.g., requires Stone Pickaxe for T1->T2 progression).
+  4. It rolls the Random Number Generator (RNG) against the player's gathering fail chance based on their tier.
+- On Fail: The event is ALLOWED to proceed (the block breaks in the world), but the item drops are intercepted and cleared. The player receives a fail message.
+- On Success: The block breaks normally and drops items.
+- After Break: If it's a natural ore, `OreRespawnManager` schedules a replacement ore to spawn back after a certain time.
+
+=======================================================
+3. CRAFTING MECHANICS
+=======================================================
+How it works:
+Crafting hooks deep into vanilla's inventory handling using Mixins (`CraftingScreenHandlerMixin`, `CraftingResultSlotMixin`, `ScreenHandlerMixin`).
+
+- During Slot Click (ScreenHandlerMixin): Before vanilla processes a click on the output slot, the mod caches the cursor stack state (`PRE_CLICK_CURSOR`).
+- Before Craft (CraftingRuleRegistry): 
+  1. Identifies the resulting item's tier and associated job.
+  2. If it's a Material Job (Toolsmithing, Armouring) and Item Tier > Player Tier, the craft is hard-blocked (100% fail).
+  3. Calculates the difference: `PlayerTier - ItemTier`. 
+  4. Rolls RNG for Fail, Poor Quality, or Normal based on that difference.
+- After Craft (CraftingResultSlotMixin injected at `onTakeItem`):
+  - On Fail: The output item is deleted. The ingredients are still consumed by vanilla. The player's cursor is restored to `PRE_CLICK_CURSOR` to prevent phantom items.
+  - On Poor Quality: The resulting item's NBT damage value is modified, setting it to 10% of its max durability.
+  - On Success: The player takes the perfect item. In all cases where ingredients are consumed, XP is granted if cooldown allows.
+
+=======================================================
+4. COMBAT & ARMOR RESTRICTIONS
+=======================================================
+How it works:
+Combat uses Fabric's `ServerLivingEntityEvents.ALLOW_DAMAGE`.
+
+- Before Damage is Dealt: 
+  1. `CombatFailHelper` identifies if the damage source is a player melee attack (sword) or ranged attack (bow/crossbow).
+  2. Checks the player's respective combat tier.
+  3. Applies the `combatDamageScale` multiplier (e.g., Tier 0 does 40% damage).
+  4. Modifies the damage amount on the event.
+- After Damage Dealt: Grants Combat XP.
+
+Armor Restriction uses a tick event check in `ArmorRestrictionHandler`.
+- During Tick: The server iterates over the player's equipped armor slots.
+- Check: Compares the armor piece's tier to the player's highest combat tier (Max of Melee or Ranged).
+- After Check: If Player Tier < Armor Tier, the server forces the item out of the armor slot and drops it into the world (or inventory). 
+
+=======================================================
+5. COOKING & SMELTING (Supervised Jobs)
+=======================================================
+How it works:
+Requires physical proximity. Hooked via block entity mixins (e.g., `AbstractFurnaceBlockEntityMixin`).
+
+- During Smelting/Cooking: The furnace/campfire block entity ticks. The mod intercepts this tick.
+- Check Distance: `SupervisedJobManager` scans for the player who started the job. If they are > 16 blocks away, a grace period timer starts.
+- On Grace Period Expiry: The smelting process is aborted. The inputs are destroyed, and smoke particles are spawned.
+- After Completion: The cooked item sits in the output slot. A "collection window" timer starts. If the player does not extract the item before the timer expires, the item turns to ash/is destroyed.
+
+=======================================================
+6. HUSBANDRY
+=======================================================
+How it works:
+Hooks into `AnimalInteractionMixin` and `HusbandryEvents`.
+
+- Before Interaction (Taming/Breeding/Milking):
+  1. When a player right-clicks an animal with breeding food or a bucket/shears, the event is intercepted.
+  2. Checks the player's Husbandry tier against the animal's required tier.
+- On Fail: The event is cancelled. If it was breeding, the food item is consumed anyway (as a penalty) and a cooldown is applied to the animal so it cannot be spammed.
+- Riding Hook: `LivingEntityMixin` or a tick handler checks every 5 seconds (100 ticks) if a player is riding a mount they don't have the tier for. If true, RNG rolls a 25% chance to buck the player off.
+
+=======================================================
+7. SLAUGHTERING
+=======================================================
+How it works:
+Overrides vanilla mob loot tables dynamically.
+
+- On Mob Death (ServerLivingEntityEvents): 
+  1. Checks if the killing blow was a critical hit. If yes, dissection is ruined.
+  2. Checks if the player used a Cleaver. If no Cleaver used, 70% chance to drop NOTHING, 30% chance for vanilla loot.
+  3. If valid, cancels vanilla drops and spawns a custom persistent Corpse Entity lying on the ground.
+- Before Dissection (Right-Clicking Corpse):
+  1. Player clicks corpse with an Axe or Cleaver.
+  2. Checks Slaughtering tier fail chance (e.g., 80% at T0).
+- After Dissection:
+  - On Fail: Corpse is destroyed, drops 1 Rotten Flesh.
+  - On Success: Rolls quality (Poor 0.5x, Normal 1.0x, Excellent 2.0x). Generates loot from the entity's loot table, multiplies the stack sizes by the quality multiplier, and drops them. Cleavers give higher Excellent chances than Axes.
+
+=======================================================
+8. FISHING, BEEKEEPING, AND STONECUTTING
+=======================================================
+- Fishing: Mixins into `FishingRodHookedCriterionMixin` or fishing bobber logic. 
+  - Before reel in: RNG checks player's fishing fail chance.
+  - On fail: Retracts bobber, drops no fish, but grants XP.
+- Beekeeping: Hooked via `BeehiveMixin` or `PlayerInteractBlock`. 
+  - Before harvest (bottle/shears): Checks tier. 
+  - On fail: Angers bees even if a campfire is present.
+  - On success: Chance to replace standard honey bottle output with a custom NBT "Royal Honey" item based on tier.
+- Stonecutting: 
+  - Before use: Checks Masonry tier. Blocks use entirely if T0. 
+  - During use: RNG rolls for "cut damage" (e.g. 10% chance to take 1 heart of damage at T1). 
+
+=======================================================
+9. SCOREBOARD / GUI / HUD SYNC
+=======================================================
+- HUD (Client Sync): Every time XP is successfully added, or when the player joins/respawns, a custom network packet (`KnowledgeSyncPayload`) serializes the player's entire knowledge state (timers, current tiers) and sends it to the client to redraw the `K` menu.
+- Server GUI: Uses vanilla Inventory ScreenHandlers to construct a read-only double chest. Items are given custom names/lores based on the player's NBT data. Event hooks prevent the player from clicking or dragging these items.

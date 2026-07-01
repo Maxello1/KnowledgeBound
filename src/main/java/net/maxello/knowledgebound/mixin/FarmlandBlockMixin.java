@@ -1,6 +1,8 @@
 package net.maxello.knowledgebound.mixin;
 
-import net.maxello.knowledgebound.KnowledgeEvents;
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.mechanics.gathering.KnowledgeEvents;
+
 import net.minecraft.block.BlockState;
 import net.minecraft.block.FarmlandBlock;
 import net.minecraft.entity.Entity;
@@ -23,3 +25,5 @@ public class FarmlandBlockMixin {
         }
     }
 }
+
+

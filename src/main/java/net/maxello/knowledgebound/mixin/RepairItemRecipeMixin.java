@@ -1,5 +1,7 @@
 package net.maxello.knowledgebound.mixin;
 
+import net.maxello.knowledgebound.KnowledgeBound;
+
 import net.minecraft.recipe.RepairItemRecipe;
 import net.minecraft.recipe.input.CraftingRecipeInput;
 import net.minecraft.world.World;
@@ -18,3 +20,4 @@ public class RepairItemRecipeMixin {
         cir.setReturnValue(false);
     }
 }
+

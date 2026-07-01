@@ -1,5 +1,7 @@
 package net.maxello.knowledgebound.mixin;
 
+import net.maxello.knowledgebound.KnowledgeBound;
+
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,3 +23,4 @@ public abstract class ExperienceOrbEntityMixin {
         ci.cancel();
     }
 }
+

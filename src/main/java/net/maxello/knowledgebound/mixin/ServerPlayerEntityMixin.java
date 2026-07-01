@@ -1,7 +1,9 @@
 package net.maxello.knowledgebound.mixin;
 
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.core.PlayerKnowledgeManager;
+
 import com.mojang.authlib.GameProfile;
-import net.maxello.knowledgebound.PlayerKnowledgeManager;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -35,3 +37,5 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
         PlayerKnowledgeManager.readFromNbt(self, nbt);
     }
 }
+
+

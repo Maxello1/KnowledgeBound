@@ -1,9 +1,10 @@
 package net.maxello.knowledgebound.mixin;
 
-import net.maxello.knowledgebound.KbIdHelper;
-import net.maxello.knowledgebound.KnowledgeBoundConfig;
-import net.maxello.knowledgebound.KnowledgeRegistry;
-import net.maxello.knowledgebound.PlayerKnowledgeManager;
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.util.KbIdHelper;
+import net.maxello.knowledgebound.config.KnowledgeBoundConfig;
+import net.maxello.knowledgebound.core.PlayerKnowledgeManager;
+import net.maxello.knowledgebound.core.KnowledgeRegistry;
 
 import net.minecraft.advancement.criterion.FishingRodHookedCriterion;
 import net.minecraft.entity.projectile.FishingBobberEntity;
@@ -71,3 +72,5 @@ public abstract class FishingRodHookedCriterionMixin {
         }
     }
 }
+
+

@@ -1,6 +1,8 @@
 package net.maxello.knowledgebound.mixin;
 
-import net.maxello.knowledgebound.PlayerKnowledgeManager;
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.core.PlayerKnowledgeManager;
+
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.screen.EnchantmentScreenHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -35,3 +37,5 @@ public abstract class EnchantmentScreenHandlerMixin {
         }
     }
 }
+
+

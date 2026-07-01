@@ -1,6 +1,8 @@
 package net.maxello.knowledgebound.mixin;
 
-import net.maxello.knowledgebound.SlaughteringManager;
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.mechanics.jobs.SlaughteringManager;
+
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffects;
@@ -42,3 +44,5 @@ public abstract class PlayerAttackCritMixin {
         SlaughteringManager.LAST_ATTACK_WAS_CRIT.set(isCrit);
     }
 }
+
+

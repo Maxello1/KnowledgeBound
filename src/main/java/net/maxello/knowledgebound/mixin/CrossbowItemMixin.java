@@ -1,7 +1,9 @@
 package net.maxello.knowledgebound.mixin;
 
-import net.maxello.knowledgebound.CombatFailHelper;
-import net.maxello.knowledgebound.KnowledgeRegistry;
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.mechanics.combat.CombatFailHelper;
+import net.maxello.knowledgebound.core.KnowledgeRegistry;
+
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
@@ -86,3 +88,5 @@ public abstract class CrossbowItemMixin {
         return originalDivergence + penalty;
     }
 }
+
+

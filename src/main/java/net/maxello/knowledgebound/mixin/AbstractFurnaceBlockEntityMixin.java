@@ -1,5 +1,11 @@
 package net.maxello.knowledgebound.mixin;
 
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.util.KbIdHelper;
+import net.maxello.knowledgebound.mechanics.jobs.SupervisedJob;
+import net.maxello.knowledgebound.mechanics.jobs.SupervisedJobManager;
+import net.maxello.knowledgebound.config.KnowledgeBoundConfig;
+
 import net.maxello.knowledgebound.*;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.AbstractFurnaceBlockEntity;
@@ -74,7 +80,7 @@ public abstract class AbstractFurnaceBlockEntityMixin {
         ItemStack input = blockEntity.getStack(0);
         if (input.isEmpty()) return;
 
-        Identifier inputId = Identifier.of(net.maxello.knowledgebound.KbIdHelper.getKbId(input));
+        Identifier inputId = Identifier.of(net.maxello.knowledgebound.util.KbIdHelper.getKbId(input));
         SupervisedJob.JobType jobType = SupervisedJobManager.getJobTypeForItem(inputId);
         if (jobType == null) return; // Not a supervised item, vanilla handles it
 
@@ -143,3 +149,5 @@ public abstract class AbstractFurnaceBlockEntityMixin {
         }
     }
 }
+
+

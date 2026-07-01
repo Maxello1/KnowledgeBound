@@ -1,8 +1,10 @@
 package net.maxello.knowledgebound.mixin;
 
-import net.maxello.knowledgebound.KnowledgeBoundConfig;
-import net.maxello.knowledgebound.KnowledgeRegistry;
-import net.maxello.knowledgebound.PlayerKnowledgeManager;
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.config.KnowledgeBoundConfig;
+import net.maxello.knowledgebound.core.PlayerKnowledgeManager;
+import net.maxello.knowledgebound.core.KnowledgeRegistry;
+
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.registry.tag.DamageTypeTags;
@@ -41,3 +43,5 @@ public abstract class DamageScalingMixin {
         return (float) (amount * multiplier);
     }
 }
+
+

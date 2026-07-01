@@ -1,6 +1,8 @@
 package net.maxello.knowledgebound.mixin;
 
-import net.maxello.knowledgebound.SlaughteringManager;
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.mechanics.jobs.SlaughteringManager;
+
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.world.ServerWorld;
@@ -47,3 +49,5 @@ public abstract class LivingEntityMixin {
         }
     }
 }
+
+

@@ -1,5 +1,7 @@
 package net.maxello.knowledgebound.mixin;
 
+import net.maxello.knowledgebound.KnowledgeBound;
+
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.CraftingScreenHandler;
@@ -26,3 +28,4 @@ public abstract class CraftingScreenHandlerMixin {
         }
     }
 }
+

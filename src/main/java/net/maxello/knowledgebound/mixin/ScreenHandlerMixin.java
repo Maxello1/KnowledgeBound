@@ -1,9 +1,11 @@
 package net.maxello.knowledgebound.mixin;
+import net.maxello.knowledgebound.util.KbIdHelper;
+import net.maxello.knowledgebound.mechanics.jobs.SupervisedJob;
+import net.maxello.knowledgebound.mechanics.jobs.SupervisedJobManager;
+import net.maxello.knowledgebound.mechanics.gathering.KnowledgeEvents;
+import net.maxello.knowledgebound.config.ConfigGuiHandler;
 
 import net.maxello.knowledgebound.KnowledgeBound;
-import net.maxello.knowledgebound.KnowledgeEvents;
-import net.maxello.knowledgebound.SupervisedJob;
-import net.maxello.knowledgebound.SupervisedJobManager;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
@@ -58,10 +60,10 @@ public class ScreenHandlerMixin {
                 Slot markerSlot = self.slots.get(4);
                 if (markerSlot.hasStack()) {
                     var markerName = markerSlot.getStack().get(net.minecraft.component.DataComponentTypes.CUSTOM_NAME);
-                    if (markerName != null && markerName.getString().equals(net.maxello.knowledgebound.ConfigGuiHandler.MAIN_MENU_MARKER)) {
+                    if (markerName != null && markerName.getString().equals(net.maxello.knowledgebound.config.ConfigGuiHandler.MAIN_MENU_MARKER)) {
                         // This is the admin config main menu
-                        net.maxello.knowledgebound.ConfigGuiHandler.handleClick(
-                                serverPlayer, net.maxello.knowledgebound.ConfigGuiHandler.MAIN_MENU_TITLE,
+                        net.maxello.knowledgebound.config.ConfigGuiHandler.handleClick(
+                                serverPlayer, net.maxello.knowledgebound.config.ConfigGuiHandler.MAIN_MENU_TITLE,
                                 slotIndex, button, actionType, self);
                         ci.cancel();
                         return;
@@ -82,8 +84,8 @@ public class ScreenHandlerMixin {
                             if (backName != null && backName.getString().contains("Back")) {
                                 // Strip §b§l prefix to get category display name
                                 String displayName = catNameStr.replaceAll("§[0-9a-fk-or]", "");
-                                String screenTitle = net.maxello.knowledgebound.ConfigGuiHandler.CATEGORY_TITLE_PREFIX + displayName;
-                                net.maxello.knowledgebound.ConfigGuiHandler.handleClick(
+                                String screenTitle = net.maxello.knowledgebound.config.ConfigGuiHandler.CATEGORY_TITLE_PREFIX + displayName;
+                                net.maxello.knowledgebound.config.ConfigGuiHandler.handleClick(
                                         serverPlayer, screenTitle,
                                         slotIndex, button, actionType, self);
                                 ci.cancel();
@@ -217,7 +219,7 @@ public class ScreenHandlerMixin {
 
         // apply crafting knowledge rules BEFORE vanilla transfers the item
         ItemStack stack = slot.getStack();
-        Identifier itemId = Identifier.of(net.maxello.knowledgebound.KbIdHelper.getKbId(stack));
+        Identifier itemId = Identifier.of(net.maxello.knowledgebound.util.KbIdHelper.getKbId(stack));
 
         KnowledgeBound.LOGGER.debug("[KB] Shift-click craft intercepted: {}", itemId);
 
@@ -272,3 +274,5 @@ public class ScreenHandlerMixin {
         }
     }
 }
+
+

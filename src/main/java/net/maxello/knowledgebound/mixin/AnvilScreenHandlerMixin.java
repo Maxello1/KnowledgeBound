@@ -1,5 +1,7 @@
 package net.maxello.knowledgebound.mixin;
 
+import net.maxello.knowledgebound.KnowledgeBound;
+
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.screen.AnvilScreenHandler;
 import net.minecraft.screen.Property;
@@ -40,3 +42,4 @@ public abstract class AnvilScreenHandlerMixin {
         }
     }
 }
+

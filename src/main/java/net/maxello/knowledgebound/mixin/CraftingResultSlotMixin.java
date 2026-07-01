@@ -1,7 +1,8 @@
 package net.maxello.knowledgebound.mixin;
+import net.maxello.knowledgebound.util.KbIdHelper;
+import net.maxello.knowledgebound.mechanics.gathering.KnowledgeEvents;
 
 import net.maxello.knowledgebound.KnowledgeBound;
-import net.maxello.knowledgebound.KnowledgeEvents;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
@@ -51,7 +52,7 @@ public abstract class CraftingResultSlotMixin extends Slot {
             return;
         }
 
-        Identifier itemId = Identifier.of(net.maxello.knowledgebound.KbIdHelper.getKbId(stack));
+        Identifier itemId = Identifier.of(net.maxello.knowledgebound.util.KbIdHelper.getKbId(stack));
         KnowledgeBound.LOGGER.debug("[KB MIXIN] Item id = {}", itemId);
 
         ItemStack modified = KnowledgeEvents.handleCrafting(
@@ -97,3 +98,5 @@ public abstract class CraftingResultSlotMixin extends Slot {
         serverPlayer.currentScreenHandler.sendContentUpdates();
     }
 }
+
+

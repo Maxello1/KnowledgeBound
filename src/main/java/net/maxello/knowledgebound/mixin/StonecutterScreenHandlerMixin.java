@@ -1,5 +1,11 @@
 package net.maxello.knowledgebound.mixin;
 
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.mechanics.gathering.KnowledgeEvents;
+import net.maxello.knowledgebound.config.KnowledgeBoundConfig;
+import net.maxello.knowledgebound.core.PlayerKnowledgeManager;
+import net.maxello.knowledgebound.core.KnowledgeRegistry;
+
 import net.maxello.knowledgebound.*;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -72,3 +78,5 @@ public abstract class StonecutterScreenHandlerMixin extends ScreenHandler {
         // on success, let vanilla handle the actual transfer
     }
 }
+
+

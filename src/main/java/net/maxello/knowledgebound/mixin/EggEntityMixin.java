@@ -1,6 +1,8 @@
 package net.maxello.knowledgebound.mixin;
 
-import net.maxello.knowledgebound.KnowledgeBoundConfig;
+import net.maxello.knowledgebound.KnowledgeBound;
+import net.maxello.knowledgebound.config.KnowledgeBoundConfig;
+
 import net.minecraft.entity.projectile.thrown.EggEntity;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -40,3 +42,5 @@ public abstract class EggEntityMixin {
         self.discard();
     }
 }
+
+
