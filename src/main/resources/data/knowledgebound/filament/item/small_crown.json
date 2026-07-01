@@ -2,7 +2,9 @@
   "id": "knowledgebound:small_crown",
   "vanillaItem": "minecraft:carved_pumpkin",
   "itemResource": {
-    "model": "knowledgebound:item/smallcrownv1"
+    "models": {
+      "default": "knowledgebound:item/smallcrownv1"
+    }
   },
   "components": {
     "minecraft:custom_name": "{\"text\":\"Small Crown\",\"color\":\"gold\",\"italic\":false}",
