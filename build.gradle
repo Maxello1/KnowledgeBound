@@ -16,6 +16,10 @@ repositories {
 		name = "Sonatype S01"
 		url = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
 	}
+	maven {
+		name = "Nucleoid"
+		url = "https://maven.nucleoid.xyz/"
+	}
 }
 
 
@@ -33,6 +37,9 @@ dependencies {
 	// Fabric Permissions API (for LuckPerms support)
 	modImplementation("me.lucko:fabric-permissions-api:0.3.3")
 	include("me.lucko:fabric-permissions-api:0.3.3")
+
+	modCompileOnly "eu.pb4:polymer-core:0.9.19+1.21.1"
+	modCompileOnly "eu.pb4:polymer-resource-pack:0.9.19+1.21.1"
 
 	testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
