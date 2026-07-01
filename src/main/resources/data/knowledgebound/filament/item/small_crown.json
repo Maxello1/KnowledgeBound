@@ -1,4 +1,5 @@
 {
+  "id": "knowledgebound:small_crown",
   "vanillaItem": "minecraft:carved_pumpkin",
   "itemResource": {
     "model": "knowledgebound:item/smallcrownv1"
