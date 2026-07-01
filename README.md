@@ -715,6 +715,7 @@ The mod registers custom item tags under `data/knowledgebound/tags/item/` for to
 
 - **Maxello** — Lead developer. Core mod architecture, all game mechanics (gathering, crafting, combat, armor restrictions), job category system (Material/Class/Gathering/Combat), Carpentry, Masonry, Beekeeping, Stonecutter, proficiency limits, boat blocking, configuration system, admin commands.
 - **nipatiitti** — Client-side Knowledge HUD overlay, server→client state synchronization (`KnowledgeSyncPayload`), item tag system for tool tier detection (`KnowledgeTags`), unit tests (`CraftingTierChancesTest`, `GatherFailConfigTest`), code cleanup and import reorganization.
+- **Project Teapot Staff** — Bringing in Ideas for all features, bug testing all features and balancing.
 
 ---
 
