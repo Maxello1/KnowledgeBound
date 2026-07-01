@@ -39,6 +39,9 @@ public class KnowledgeBound implements ModInitializer {
         // Tell Polymer to include our mod's custom assets (like the Small Crown model) in its auto-generated resource pack!
         // Without this, the client never downloads the 3D models and falls back to vanilla items.
         eu.pb4.polymer.resourcepack.api.PolymerResourcePackUtils.addModAssets(MOD_ID);
+        
+        // Force the resource pack on the server, so players must accept it or they will be kicked
+        eu.pb4.polymer.resourcepack.api.PolymerResourcePackUtils.markAsRequired();
 
         // It's super important we load the config first!
         // A lot of the registries below rely on config values (like whether certain features are enabled),
