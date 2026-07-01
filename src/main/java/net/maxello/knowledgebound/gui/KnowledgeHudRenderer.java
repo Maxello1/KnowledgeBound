@@ -10,8 +10,10 @@ import net.minecraft.client.gui.DrawContext;
 import java.util.List;
 
 /**
- * Renders the knowledge status overlay (toggled with the knowledge HUD key).
- * Client-only — never reference this class from server-side code.
+ * Renders the custom knowledge status overlay on the screen (toggled with the 'K' key).
+ * This runs entirely on the client. It grabs the current state from ClientKnowledgeState
+ * and draws the translucent black box, the text, and the progress bars.
+ * DO NOT call anything from this class on the server side!
  */
 public final class KnowledgeHudRenderer {
 

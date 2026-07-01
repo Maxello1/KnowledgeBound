@@ -7,6 +7,9 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 
+// This class is our central hub for spitting out chat messages to the player.
+// It takes the raw text templates from the config file, swaps out the placeholders 
+// (like {knowledge} or {tier}), and turns them into proper Minecraft Text components.
 public final class KnowledgeBoundTextFormatter {
 
     private KnowledgeBoundTextFormatter() {

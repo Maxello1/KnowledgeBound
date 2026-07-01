@@ -12,10 +12,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class PlayerEntityMixin {
 
     /**
-     * Block anything that tries to subtract XP levels (anvil, enchanting, etc.).
+     * Minecraft usually subtracts XP levels by calling addExperienceLevels with a negative number.
+     * Since this mod completely reworks how XP is used, we want to block the game from draining
+     * the player's vanilla experience levels (e.g., when they use an anvil or enchant something).
      */
     @Inject(method = "addExperienceLevels", at = @At("HEAD"), cancellable = true)
     private void knowledgebound$noNegativeLevels(int levels, CallbackInfo ci) {
+        // If the game is trying to take levels away (negative value), we just say "No thanks!" and cancel it.
+        // Earning levels (positive value) is still perfectly fine.
         if (levels < 0) {
             ci.cancel();
         }

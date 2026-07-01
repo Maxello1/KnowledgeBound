@@ -32,34 +32,44 @@ public abstract class MountRidingMixin {
     @Inject(method = "interactMob", at = @At("HEAD"), cancellable = true)
     private void knowledgebound$onInteractMob(PlayerEntity player, Hand hand,
                                                CallbackInfoReturnable<ActionResult> cir) {
+        // As always, only run this logic on the server side.
         if (player.getWorld().isClient()) return;
         if (!(player instanceof ServerPlayerEntity serverPlayer)) return;
 
         KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
+        // If husbandry riding isn't even enabled, let the player mount normally without our interference.
         if (!cfg.husbandryEnabled || !cfg.husbandryRidingEnabled) return;
 
         AbstractHorseEntity self = (AbstractHorseEntity) (Object) this;
         ItemStack stack = player.getStackInHand(hand);
 
-        // Don't intercept feeding interactions — only gate mounting/taming
+        // We only want to gate the action of actually getting on the animal's back.
+        // If they're just feeding it apples or wheat, we should let them do that.
         if (self.isBreedingItem(stack)) return;
 
+        // Find out what level of Husbandry the player has.
         int playerTier = PlayerKnowledgeManager.getTier(serverPlayer, KnowledgeRegistry.HUSBANDRY_ID);
 
-        // Tier 0 — completely untrained, can't interact with mounts at all
+        // Tier 0 means they haven't learned the very basics of dealing with animals yet.
+        // So we completely block them from getting on a mount.
         if (playerTier < 1) {
             String msg;
+            // The message changes depending on whether the horse is already tamed or still wild.
             if (!self.isTame()) {
                 msg = cfg.messages.husbandryTamingTierLow.replace("{minTier}", "1");
             } else {
                 msg = cfg.messages.husbandryRidingTierLow.replace("{minTier}", "1");
             }
             serverPlayer.sendMessage(Text.literal(msg), true);
+            // Cancel the vanilla mount action completely.
             cir.setReturnValue(ActionResult.SUCCESS);
             return;
         }
 
-        // Tier 1+ — allow mounting/taming, riding reliability handled by HusbandryEvents tick
+        // If they are at least Tier 1, we allow them to get on the mount!
+        // The actual chance of getting bucked off for being unskilled is handled elsewhere
+        // (inside the HusbandryEvents tick handler).
+        // But since they interacted with an animal, let's give them some XP!
         PlayerKnowledgeManager.grantMinuteIfAllowed(serverPlayer, KnowledgeRegistry.HUSBANDRY_ID);
     }
 }

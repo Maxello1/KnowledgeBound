@@ -20,7 +20,11 @@ import java.util.Map;
 
 /**
  * Admin config GUI system — editable config menus using vanilla chest GUIs.
- * All server-side, no client mod required.
+ * All server-side, no client mod required!
+ * 
+ * We essentially "fake" a chest inventory screen and fill it with our own items that act as buttons.
+ * When a player clicks on one of these items, we intercept the click, cancel it so they don't actually
+ * pick up the item, and then run our own code (like changing a config value or opening a new menu).
  */
 public final class ConfigGuiHandler {
 
@@ -42,7 +46,9 @@ public final class ConfigGuiHandler {
     // Main Menu
     // ──────────────────────────────────────────────
 
+    // Opens the root menu showing all the different categories.
     public static void openMainMenu(ServerPlayerEntity player) {
+        // A generic 54-slot inventory, exactly like a double chest.
         SimpleInventory inv = new SimpleInventory(54);
 
         // Row 0: Title bar
@@ -95,6 +101,7 @@ public final class ConfigGuiHandler {
         openCategory(player, categoryId, 0);
     }
 
+    // Opens a specific category screen. This one handles pagination if there are too many settings to fit on one page.
     public static void openCategory(ServerPlayerEntity player, String categoryId, int page) {
         ConfigGuiCategory cat = ConfigGuiCategory.get(categoryId);
         if (cat == null) return;
@@ -165,7 +172,9 @@ public final class ConfigGuiHandler {
 
     /**
      * Handle a click in a config GUI screen. Called from ScreenHandlerMixin.
-     * @return true if the click was handled (cancel vanilla behavior)
+     * This is the real meat of the class. Every time a player clicks in our fake chest,
+     * this checks what they clicked and does the appropriate action.
+     * @return true if the click was handled (cancel vanilla behavior so they don't steal the item)
      */
     public static boolean handleClick(ServerPlayerEntity player, String screenTitle,
                                        int slotIndex, int button, SlotActionType actionType,

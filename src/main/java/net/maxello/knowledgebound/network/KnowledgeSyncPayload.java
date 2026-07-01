@@ -10,9 +10,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * S2C packet carrying the full knowledge state for one player.
- * Sent whenever state changes so the client HUD stays in sync.
- * Each knowledge entry: [tier, currentMinutes, neededMinutes, maxTier]
+ * Server-to-Client packet carrying the full knowledge state for one player.
+ * We send this over the network whenever a player's stats change, so their 
+ * client-side HUD stays perfectly in sync with the server.
+ * Each knowledge entry is just an array of integers: [tier, currentMinutes, neededMinutes, maxTier]
  */
 public record KnowledgeSyncPayload(Map<String, int[]> knowledgeData) implements CustomPayload {
 

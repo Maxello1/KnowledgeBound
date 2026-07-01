@@ -6,8 +6,19 @@ import net.minecraft.util.Identifier;
 
 import java.util.*;
 
+/**
+ * The big dictionary of all the specific knowledges in the mod.
+ * 
+ * We keep every KnowledgeDefinition here so we can easily look them up by ID
+ * when a player mines a block, crafts an item, or levels up.
+ * 
+ * This class also serves as the hardcoded initialization point for all our base
+ * knowledges (Forestry, Mining, Toolsmithing, etc.). In a perfect world, we might
+ * data-drive this with JSON, but for now, they are defined in code.
+ */
 public class KnowledgeRegistry {
 
+    // The actual map storing our definitions.
     private static final Map<Identifier, KnowledgeDefinition> REGISTRY = new HashMap<>();
 
     // gathering
@@ -67,40 +78,41 @@ public class KnowledgeRegistry {
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering knowledges…");
 
+        // We manually create and register every single knowledge here.
         // gathering
         register(createForestryDefinition());
         register(createMiningDefinition());
         register(createDiggingDefinition());
         register(createFarmingDefinition());
 
-        // material jobs
+        // material jobs (the 5-tier crafting ones)
         register(createToolsmithingDefinition());
         register(createWeaponsmithingDefinition());
         register(createArmouringDefinition());
 
-        // combat
+        // combat (weapons and bows)
         register(createRangedCombatDefinition());
         register(createMeleeCombatDefinition());
 
         // fishing
         register(createFishingDefinition());
 
-        // class jobs
+        // class jobs (the 3-tier specialty ones)
         register(createCarpentryDefinition());
         register(createMasonryDefinition());
         register(createBeekeepingDefinition());
 
-        // supervised jobs
+        // supervised jobs (furnace/cooking stuff)
         register(createSmeltingDefinition());
         register(createCookingDefinition());
 
-        // husbandry
+        // husbandry (animals and riding)
         register(createHusbandryDefinition());
 
-        // jeweller
+        // jeweller (rings and baubles maybe?)
         register(createJewellerDefinition());
 
-        // slaughtering
+        // slaughtering (better drops and dissecting)
         register(createSlaughteringDefinition());
     }
 
@@ -108,10 +120,12 @@ public class KnowledgeRegistry {
         REGISTRY.put(def.getId(), def);
     }
 
+    /** Look up a knowledge by its ID. Returns null if it doesn't exist. */
     public static KnowledgeDefinition get(Identifier id) {
         return REGISTRY.get(id);
     }
 
+    /** Grab all of them. Useful for syncing data to the client or looping over everything. */
     public static Collection<KnowledgeDefinition> all() {
         return REGISTRY.values();
     }
@@ -120,6 +134,10 @@ public class KnowledgeRegistry {
     //  helpers
     // --------------------------------------------------
 
+    /**
+     * Builds the standard "minutes per tier" progression map used by most 5-tier jobs.
+     * It pulls the base values from the config and multiplies them by the global multiplier.
+     */
     private static Map<Integer, Integer> defaultMinutesPerTier() {
         Map<Integer, Integer> minutesPerTier = new HashMap<>();
 
@@ -130,12 +148,17 @@ public class KnowledgeRegistry {
         for (int i = 0; i < base.length; i++) {
             int tier = i + 1;
             int value = (int) Math.round(base[i] * m);
+            // We clamp to at least 1 minute. It doesn't make sense to require 0 minutes to level up.
             minutesPerTier.put(tier, Math.max(1, value));
         }
 
         return minutesPerTier;
     }
 
+    /**
+     * Same as defaultMinutesPerTier, but uses the base times specifically designated
+     * for 3-tier class jobs (like Carpentry) from the config.
+     */
     private static Map<Integer, Integer> classJobMinutesPerTier() {
         Map<Integer, Integer> minutesPerTier = new HashMap<>();
 
@@ -152,6 +175,10 @@ public class KnowledgeRegistry {
         return minutesPerTier;
     }
 
+    /**
+     * The standard progression of tool tiers for most gathering and crafting jobs.
+     * Basically: Tier 0 needs Wood. Tier 1 needs Stone. Tier 2 needs Copper, etc.
+     */
     private static Map<Integer, Set<KnowledgeDefinition.ToolTier>> defaultMaterialTierProgression() {
         Map<Integer, Set<KnowledgeDefinition.ToolTier>> xpToolTiers = new HashMap<>();
         xpToolTiers.put(0, EnumSet.of(KnowledgeDefinition.ToolTier.WOOD));
@@ -162,7 +189,10 @@ public class KnowledgeRegistry {
         return xpToolTiers;
     }
 
-    // empty tool tier map for class jobs (xp granted by crafting, not by tool)
+    /**
+     * Some jobs (like Class jobs) grant XP purely by the act of crafting a block,
+     * not by using a specific tool. So we return an empty map for their tool tiers.
+     */
     private static Map<Integer, Set<KnowledgeDefinition.ToolTier>> noToolTiers() {
         return new HashMap<>();
     }

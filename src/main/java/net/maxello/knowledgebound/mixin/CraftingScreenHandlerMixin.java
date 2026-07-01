@@ -14,16 +14,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class CraftingScreenHandlerMixin {
 
     /**
-     * Disable shift-click crafting from the result slot so KnowledgeBound's
-     * CraftingResultSlot mixin can't be bypassed.
+     * Disable shift-click crafting from the result slot entirely.
+     * Why? Because trying to gracefully intercept and swap items during a shift-click
+     * rapid-fire crafting session is an absolute nightmare that leads to item duplication glitches 
+     * and crazy server desyncs. 
+     * So, we just say "No". If they want to craft something, they have to manually pull it 
+     * out of the slot so our other mixins can safely run the tier checks.
      */
     @Inject(method = "quickMove", at = @At("HEAD"), cancellable = true)
     private void knowledgebound$disableShiftClickOnResult(PlayerEntity player,
                                                           int slotIndex,
                                                           CallbackInfoReturnable<ItemStack> cir) {
-        // In vanilla CraftingScreenHandler the crafting result is always slot 0
+        // In the vanilla CraftingScreenHandler, the actual output slot where the result sits is always slot 0.
         if (slotIndex == 0) {
-            // Just do nothing and say "no items moved"
+            // By returning an empty item stack here, we basically tell the server 
+            // "Nope, nothing moved, ignore the shift-click."
             cir.setReturnValue(ItemStack.EMPTY);
         }
     }

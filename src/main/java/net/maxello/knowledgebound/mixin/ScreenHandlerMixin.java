@@ -108,8 +108,11 @@ public class ScreenHandlerMixin {
             } catch (Exception ignored) {}
         }
 
-        // save cursor before any processing (stored in KnowledgeEvents, not here,
-        // because mixin classes can't have non-private static fields)
+        // This is a crucial step! We need to take a snapshot of whatever item the player is holding with their cursor
+        // BEFORE the vanilla game processes this click.
+        // We stash it in a static ThreadLocal variable inside KnowledgeEvents. 
+        // Why not here? Because mixins get injected directly into the target class, so adding private static fields
+        // can sometimes get messy with cross-mod compatibility or classloading.
         KnowledgeEvents.PRE_CLICK_CURSOR.set(self.getCursorStack().copy());
 
         // --- Stonecutter output (normal clicks only, shift-click via quickMove) ---
@@ -127,25 +130,29 @@ public class ScreenHandlerMixin {
         }
 
         // --- Furnace output slot collection (supervised jobs) ---
+        // Supervised jobs (like smelting iron) require the player to manually extract the items
+        // while the game checks if they were actually standing nearby the whole time.
         if (self instanceof AbstractFurnaceScreenHandler) {
-            // Slot 2 is the output slot in furnaces/smokers/blast furnaces
+            // Slot 2 is the output slot for standard furnaces, smokers, and blast furnaces.
             if (slotIndex == 2) {
                 Slot outputSlot = self.slots.get(2);
                 if (outputSlot.hasStack() && !outputSlot.getStack().isEmpty()) {
                     if (serverPlayer.getWorld() instanceof ServerWorld serverWorld) {
-                        // Find the furnace position from the player's vicinity
+                        // Let's try to locate the exact furnace block the player is interacting with.
                         BlockPos furnacePos = SupervisedJobManager.findFurnacePosForPlayer(serverPlayer);
                         if (furnacePos != null) {
+                            // Now we ask the manager: "Did they supervise this job properly?"
                             boolean allowed = SupervisedJobManager.onItemCollected(
                                     serverPlayer, serverWorld, furnacePos);
                             if (!allowed) {
-                                // Fail — consume the output
+                                // They failed! They walked away or did something else.
+                                // The punishment is harsh: the item is consumed and they get nothing.
                                 outputSlot.setStack(ItemStack.EMPTY);
                                 self.sendContentUpdates();
                                 ci.cancel();
                                 return;
                             }
-                            // Success — let vanilla handle the pickup
+                            // If allowed is true, we do nothing and let vanilla handle picking up the item normally.
                         }
                     }
                 }
@@ -217,46 +224,52 @@ public class ScreenHandlerMixin {
         if (!(slot instanceof CraftingResultSlot)) return;
         if (!slot.hasStack() || slot.getStack().isEmpty()) return;
 
-        // apply crafting knowledge rules BEFORE vanilla transfers the item
+        // We need to apply our custom crafting knowledge rules (like fail chances or poor quality output)
+        // BEFORE vanilla actually transfers the item into the player's inventory.
         ItemStack stack = slot.getStack();
         Identifier itemId = Identifier.of(net.maxello.knowledgebound.util.KbIdHelper.getKbId(stack));
 
         KnowledgeBound.LOGGER.debug("[KB] Shift-click craft intercepted: {}", itemId);
 
+        // This flag tells the crafting listeners down the line not to double-roll for this same craft.
         KnowledgeEvents.SKIP_NEXT_ROLL.set(true);
         ItemStack modified;
         try {
+            // Ask the events system what the final outcome of this craft should be.
             modified = KnowledgeEvents.handleCrafting(
                     serverPlayer,
                     itemId,
                     stack.copy()
             );
         } finally {
-            // we do NOT clear it here! We must let it remain true so that 
-            // the impending slot.onTakeItem (whether called by us below or by vanilla later)
-            // will see it and skip. It will be cleared inside onTakeItem.
+            // Notice we do NOT clear the SKIP_NEXT_ROLL flag here! 
+            // We need to leave it as true because the impending vanilla slot.onTakeItem call 
+            // will check it to avoid running the crafting logic a second time.
+            // It will be cleared inside onTakeItem later.
         }
 
         if (modified == null || modified == stack) {
-            // no rule matched — let vanilla handle normally.
-            // Clear the flag here so it doesn't leak. If it reaches CraftingResultSlotMixin, 
-            // it will process normally and also find no rule.
+            // No custom knowledge rule applied to this item. Let vanilla handle it exactly as normal.
+            // We do have to clear the flag here though, so we don't accidentally skip the next real roll.
             KnowledgeEvents.SKIP_NEXT_ROLL.set(false);
             return;
         }
 
         if (modified.isEmpty()) {
-            // craft failed — consume ingredients, cancel the shift-click
+            // The craft failed entirely! The player messed up.
+            // We consume the ingredients, log it, and completely cancel the shift-click.
             KnowledgeBound.LOGGER.debug("[KB] Shift-click craft FAILED for {}", itemId);
             slot.setStack(ItemStack.EMPTY);
             slot.onTakeItem(player, stack);
             self.sendContentUpdates();
             ci.cancel();
         } else {
-            // poor quality — replace the stack in the slot before vanilla transfers it
+            // The craft succeeded, but it was poor quality! 
+            // We overwrite the item sitting in the result slot with our damaged/modified version
+            // right before vanilla swoops in to transfer it to their inventory.
             KnowledgeBound.LOGGER.debug("[KB] Shift-click craft POOR for {}, dmg={}", itemId, modified.getDamage());
             slot.setStack(modified);
-            // let vanilla continue with the modified stack
+            // Now we just let vanilla continue and finish the transfer.
         }
     }
 

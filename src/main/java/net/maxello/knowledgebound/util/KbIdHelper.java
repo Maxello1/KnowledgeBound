@@ -7,6 +7,9 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 
+// A little utility class to figure out what an item actually is.
+// It helps us handle custom items that share a vanilla base item (like custom honey bottles)
+// by checking the NBT data first before falling back to the normal item ID.
 public class KbIdHelper {
     public static String getKbId(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return "";

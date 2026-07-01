@@ -23,7 +23,11 @@ public abstract class PlayerAttackCritMixin {
     private void knowledgebound$detectCrit(Entity target, CallbackInfo ci) {
         PlayerEntity self = (PlayerEntity) (Object) this;
 
-        // Replicate vanilla critical hit conditions from PlayerEntity.attack()
+        // In order to give proper slaughtering drops, we need to know if the killing blow was a critical hit.
+        // Sadly, Minecraft doesn't natively expose a simple "wasCrit" flag we can read later, 
+        // so we have to manually replicate the exact same conditions vanilla uses to decide if an attack is a crit!
+        
+        // First chunk of checks: Falling, not on ground, not climbing, not in water, not blind, not riding a vehicle.
         boolean isCrit = self.fallDistance > 0.0F
                 && !self.isOnGround()
                 && !self.isClimbing()
@@ -32,15 +36,20 @@ public abstract class PlayerAttackCritMixin {
                 && !self.hasVehicle()
                 && target instanceof LivingEntity;
 
-        // Vanilla also requires the player is not sprinting for a crit
-        // and that the attack cooldown progress is > 0.9
+        // Next, the player can't be sprinting while doing a critical hit.
         if (isCrit) {
             isCrit = !self.isSprinting();
         }
+        
+        // Finally, their attack cooldown progress needs to be nearly full (above 90%). 
+        // This stops them from just spam-clicking to get crits.
         if (isCrit) {
             isCrit = self.getAttackCooldownProgress(0.5F) > 0.9F;
         }
 
+        // We stash this result into a ThreadLocal boolean inside SlaughteringManager.
+        // That way, if this attack ends up actually killing the entity a microsecond later,
+        // our death event handler can check this flag and say "Ah, that was a clean critical strike!"
         SlaughteringManager.LAST_ATTACK_WAS_CRIT.set(isCrit);
     }
 }

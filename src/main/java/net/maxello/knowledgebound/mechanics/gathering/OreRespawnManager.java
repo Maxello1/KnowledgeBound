@@ -19,17 +19,26 @@ import net.minecraft.world.PersistentState;
 import java.util.*;
 
 /**
- * Manages ore respawning — when a natural ore is mined, it's replaced by a placeholder
- * block that reverts to the ore after a configurable delay.
- * Data persists across server restarts via PersistentState.
+ * The system that makes ores renewable!
+ * 
+ * When a player mines a natural ore (like iron or diamond), instead of just leaving air,
+ * we replace it with a "placeholder" block (usually cobblestone or deepslate).
+ * We then set a timer. Once the timer expires, the cobblestone magically turns back
+ * into the ore.
+ * 
+ * We have to save all these timers to the world save files (`PersistentState`) so
+ * that if the server crashes or restarts, all the ores still remember when they
+ * are supposed to respawn.
  */
 public final class OreRespawnManager {
 
     private OreRespawnManager() {}
 
     private static final String STATE_KEY = "knowledgebound_ore_respawns";
+    
+    // We don't need to check every single tick, checking once a second is plenty.
     private static int tickCounter = 0;
-    private static final int TICK_INTERVAL = 20; // check once per second
+    private static final int TICK_INTERVAL = 20; 
 
     public static void init() {
         ServerTickEvents.END_SERVER_TICK.register(OreRespawnManager::tick);
@@ -38,12 +47,15 @@ public final class OreRespawnManager {
 
     // --- Ore Respawn Entry ---
 
+    /**
+     * A simple data class holding all the information about a single ore that is currently waiting to respawn.
+     */
     public static class OreRespawnEntry {
         public final BlockPos pos;
         public final String originalBlockId;
         public final String placeholderBlockId;
-        public long respawnAtTick;
-        public int remainingRespawns;
+        public long respawnAtTick; // The exact world tick when it should come back
+        public int remainingRespawns; // How many more times it can respawn before dying forever (-1 = infinite)
 
         public OreRespawnEntry(BlockPos pos, String originalBlockId, String placeholderBlockId,
                                long respawnAtTick, int remainingRespawns) {
@@ -80,6 +92,9 @@ public final class OreRespawnManager {
 
     // --- PersistentState ---
 
+    /**
+     * The actual save data object that gets serialized to the world file.
+     */
     public static class OreRespawnState extends PersistentState {
         public final Map<BlockPos, OreRespawnEntry> entries = new HashMap<>();
 
@@ -117,8 +132,8 @@ public final class OreRespawnManager {
     // --- Public API ---
 
     /**
-     * Schedule an ore to respawn at the given position.
-     * Replaces the ore with its placeholder immediately.
+     * Called by the block breaking event right after a player successfully mines an ore.
+     * We instantly plop down a cobblestone/deepslate block in its place and start the timer.
      */
     public static void scheduleRespawn(ServerWorld world, BlockPos pos, BlockState originalState) {
         KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
@@ -126,19 +141,19 @@ public final class OreRespawnManager {
 
         String oreId = Registries.BLOCK.getId(originalState.getBlock()).toString();
 
-        // Get placeholder block ID from config
+        // Figure out what the "scab" block should be. We usually match deepslate ores with cobbled deepslate.
         String placeholderId = cfg.orePlaceholderMap.getOrDefault(oreId,
                 oreId.contains("deepslate") ? "minecraft:cobbled_deepslate" : "minecraft:cobblestone");
 
-        // Place the placeholder
+        // Swap out the air for the placeholder
         Block placeholderBlock = Registries.BLOCK.get(Identifier.of(placeholderId));
         world.setBlockState(pos, placeholderBlock.getDefaultState(), Block.NOTIFY_ALL);
 
-        // Calculate respawn time
+        // Do the math to figure out when it should come back.
         long respawnAt = world.getServer().getTicks() + cfg.oreRespawnDelayTicks;
         int remaining = cfg.oreRespawnMaxCount;
 
-        // Store the entry
+        // Save it to the tracking list!
         OreRespawnState state = getState(world);
         state.entries.put(pos, new OreRespawnEntry(pos, oreId, placeholderId, respawnAt, remaining));
         state.markDirty();
@@ -148,8 +163,8 @@ public final class OreRespawnManager {
     }
 
     /**
-     * Called when a placeholder block is broken by a player or other means.
-     * Cancels the respawn permanently.
+     * If a player mines the cobblestone placeholder before it turns back into an ore,
+     * the ore is gone forever! We cancel the timer.
      */
     public static void cancelRespawn(ServerWorld world, BlockPos pos) {
         OreRespawnState state = getState(world);
@@ -161,7 +176,8 @@ public final class OreRespawnManager {
     }
 
     /**
-     * Check if a position is a tracked placeholder (should not grant mining XP).
+     * Checks if a specific block is actually a placeholder waiting to respawn.
+     * We use this to prevent players from getting XP for mining placeholders.
      */
     public static boolean isPlaceholder(ServerWorld world, BlockPos pos) {
         OreRespawnState state = getState(world);
@@ -169,7 +185,7 @@ public final class OreRespawnManager {
     }
 
     /**
-     * Check if a block is a configured respawnable ore.
+     * Checks if an ore is even allowed to respawn based on the config list.
      */
     public static boolean isRespawnableOre(BlockState state) {
         String blockId = Registries.BLOCK.getId(state.getBlock()).toString();
@@ -185,12 +201,16 @@ public final class OreRespawnManager {
         );
     }
 
+    /**
+     * Our main loop. Runs every second.
+     * Iterates through all tracked ores and sees if any of their timers have expired.
+     */
     private static void tick(MinecraftServer server) {
         if (!KnowledgeBoundConfig.INSTANCE.oreRespawnEnabled) return;
 
         tickCounter++;
         if (tickCounter < TICK_INTERVAL) return;
-        tickCounter = 0;
+        tickCounter = 0; // Reset every second
 
         long currentTick = server.getTicks();
 
@@ -203,36 +223,39 @@ public final class OreRespawnManager {
                 Map.Entry<BlockPos, OreRespawnEntry> mapEntry = it.next();
                 OreRespawnEntry entry = mapEntry.getValue();
 
+                // Not time yet!
                 if (currentTick < entry.respawnAtTick) continue;
 
                 BlockPos pos = entry.pos;
 
-                // Check if chunk is loaded
+                // Important: Don't try to change blocks in unloaded chunks, or we'll 
+                // cause massive lag spikes loading random chunks across the map.
                 if (!world.isChunkLoaded(pos)) continue;
 
-                // Verify placeholder is still there
+                // Did someone or something replace our placeholder with something else?
+                // (e.g. they placed dirt over it or a creeper blew it up)
                 BlockState currentState = world.getBlockState(pos);
                 String currentBlockId = Registries.BLOCK.getId(currentState.getBlock()).toString();
                 if (!currentBlockId.equals(entry.placeholderBlockId)) {
-                    // Placeholder was replaced — cancel
+                    // The placeholder is gone, so the ore is lost forever.
                     it.remove();
                     state.markDirty();
                     continue;
                 }
 
-                // Restore the ore
+                // Everything looks good! Turn the cobblestone back into the beautiful ore.
                 Block oreBlock = Registries.BLOCK.get(Identifier.of(entry.originalBlockId));
                 world.setBlockState(pos, oreBlock.getDefaultState(), Block.NOTIFY_ALL);
 
                 KnowledgeBound.LOGGER.debug("[KnowledgeBound] Restored ore {} at {}", entry.originalBlockId, pos);
 
-                // Handle respawn count
+                // Handle limited respawns (if config dictates they shouldn't last forever)
                 if (entry.remainingRespawns > 0) {
                     entry.remainingRespawns--;
                 }
 
                 // If exhausted (count was > 0 and is now 0), remove permanently
-                // If unlimited (-1), also remove (will re-schedule on next mine)
+                // If unlimited (-1), also remove (it will just get re-scheduled the NEXT time they mine it)
                 it.remove();
                 state.markDirty();
             }

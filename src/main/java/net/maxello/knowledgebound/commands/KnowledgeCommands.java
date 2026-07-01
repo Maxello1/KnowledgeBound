@@ -28,8 +28,12 @@ import net.minecraft.util.Identifier;
 
 import java.util.Collection;
 
+// This is our command center for everything related to KnowledgeBound.
+// It handles all the /kb commands you'd use in-game, whether you're a player checking your stats
+// or an admin setting someone's tier or messing with the config.
 public final class KnowledgeCommands {
 
+    // We don't want anyone creating an instance of this class since it's just a collection of static commands.
     private KnowledgeCommands() {}
 
     /** Suggests all registered knowledge IDs (e.g. "forestry", "mining"). */
@@ -50,6 +54,8 @@ public final class KnowledgeCommands {
                 return builder.buildFuture();
             };
 
+    // This gets called during mod initialization to register all our command branches with the server.
+    // We use Brigadier (Minecraft's standard command parser) to build out the tree of subcommands.
     public static void init() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 
@@ -217,6 +223,8 @@ public final class KnowledgeCommands {
     // /kb  (self-check)
     // --------------------------------------------------
 
+    // This is the default command when a player just types "/kb" with no arguments.
+    // It basically just looks up their own stats and prints them in chat.
     private static int executeSelfCheck(CommandContext<ServerCommandSource> ctx) {
         ServerCommandSource src = ctx.getSource();
         ServerPlayerEntity player;
@@ -305,6 +313,8 @@ public final class KnowledgeCommands {
     // /kb reset <player>
     // --------------------------------------------------
 
+    // Wipe out all knowledge for a specific player. Useful if they want a fresh start,
+    // or if an admin wants to punish them, I guess!
     private static int executeResetAll(CommandContext<ServerCommandSource> ctx) {
         ServerCommandSource src = ctx.getSource();
 
@@ -536,7 +546,11 @@ public final class KnowledgeCommands {
     // Shared helpers
     // --------------------------------------------------
 
-    /** Resolve a knowledge name (e.g. "forestry") to its full Identifier. */
+    /** 
+     * Resolve a knowledge name (e.g. "forestry") to its full Identifier.
+     * This is super handy because it lets players just type "forestry" instead of "knowledgebound:forestry".
+     * It checks for an exact match first, and if not, tries to find a matching suffix.
+     */
     private static Identifier resolveKnowledge(String name) {
         // Try exact match first (e.g. "forestry" → "knowledgebound:forestry")
         Identifier id = Identifier.of(KnowledgeBound.MOD_ID, name);

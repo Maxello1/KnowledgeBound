@@ -11,8 +11,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Central registry mapping entity types to their required Husbandry tier.
- * Populated from config on init().
+ * This class keeps track of which animals require which Husbandry tier to ride.
+ * 
+ * Instead of hardcoding "horses require tier 1, pigs require tier 2", we load this
+ * dynamically from the mod's configuration file during initialization. This lets
+ * server admins decide exactly how hard it should be to ride specific animals or
+ * custom modded creatures.
  */
 public final class AnimalTierRegistry {
 
@@ -24,14 +28,20 @@ public final class AnimalTierRegistry {
         TIER_MAP.clear();
         KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
 
+        // Loop through all the animal tiers defined in the config file.
         for (Map.Entry<String, Integer> entry : cfg.husbandryAnimalTiers.entrySet()) {
             try {
+                // Convert the string ID (like "minecraft:horse") into an Identifier,
+                // and then look it up in the vanilla entity registry.
                 Identifier id = Identifier.of(entry.getKey());
                 EntityType<?> type = Registries.ENTITY_TYPE.get(id);
+                
+                // If it actually exists in the game, we record its required tier.
                 if (type != null) {
                     TIER_MAP.put(type, entry.getValue());
                 }
             } catch (Exception e) {
+                // If they typo'd something in the config, log a warning but don't crash.
                 KnowledgeBound.LOGGER.warn("[KnowledgeBound] Invalid husbandryAnimalTiers id: {}", entry.getKey());
             }
         }

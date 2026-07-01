@@ -12,15 +12,22 @@ import net.minecraft.util.Identifier;
 import java.util.Random;
 
 /**
- * Handles crafting outcomes based on the diff between player tier and item tier.
- * Material jobs hard-block tier jumps (100% fail if diff < 0).
- * Class jobs can jump tiers using the standard diff table.
+ * Handles what actually happens when a player takes an item out of the crafting grid.
+ * 
+ * We check if their tier is high enough. If it's a core material job (like blacksmithing),
+ * they are strictly forbidden from crafting things above their tier. If it's a class job
+ * (like Carpentry), they can try to craft it, but they might completely ruin the materials
+ * or produce a "poor quality" version.
  */
 public class CraftingKnowledgeRule {
 
     private final Identifier id;
     private final Identifier knowledgeId;
+    
+    // We don't actually use this variable currently because we pull from the config,
+    // but it's here for legacy support in case we want specific rules to have custom damage ratios.
     private final double poorDurabilityFraction;
+    
     private final Random random = new Random();
 
     public CraftingKnowledgeRule(Identifier id,
@@ -40,74 +47,87 @@ public class CraftingKnowledgeRule {
     }
 
     /**
-     * Apply this rule to the crafted stack.
+     * Intercepts the crafted item right before the player gets it.
+     * Returns an empty stack if the craft fails, or a damaged stack if it's poor quality.
      */
     public ItemStack apply(ServerPlayerEntity player,
                            Identifier itemId,
                            ItemStack originalStack,
                            int knowledgeTier) {
 
-        // get required tier
+        // Find out what tier this item actually is.
         int itemTier = CraftingRuleRegistry.getItemTier(itemId);
+        
+        // This is the most important calculation. 
+        // If it's negative, the player is trying to craft above their weight class.
         int diff = knowledgeTier - itemTier;
 
-        // check if this is a material job
+        // Is this a strict material job? (Toolsmithing, Armouring, Weaponsmithing)
         KnowledgeDefinition def = KnowledgeRegistry.get(knowledgeId);
         boolean isMaterialJob = def != null &&
                 def.getJobCategory() == KnowledgeDefinition.JobCategory.MATERIAL_5_TIER;
 
-        // material jobs can't jump tiers at all
+        // Material jobs absolutely cannot jump tiers. If you are a tier 1 smith,
+        // you cannot craft a diamond sword. Period.
         if (isMaterialJob && diff < 0) {
             player.sendMessage(
                     KnowledgeBoundTextFormatter.craftingLevelTooLow(knowledgeId),
-                    true
+                    true // action bar
             );
             return ItemStack.EMPTY;
         }
 
-        // chances based on diff
+        // For class jobs (like Carpentry), we look up the chances in the config.
+        // It maps the tier difference to a failure/poor chance.
         KnowledgeBoundConfig.CraftingTierChances tc =
                 KnowledgeBoundConfig.INSTANCE.getCraftingChancesForDiff(diff);
-        tc.normalize();
+        tc.normalize(); // Ensure the math doesn't result in >100% chance
 
         double roll = random.nextDouble();
 
         double failChance = Math.max(0.0, tc.failChance);
         double poorChance = Math.max(0.0, tc.poorChance);
 
+        // First we check if it's a total failure.
         if (roll < failChance) {
-            // rip item
+            // They messed up so badly that the materials are wasted and they get nothing.
             player.sendMessage(
                     KnowledgeBoundTextFormatter.craftingFail(knowledgeId),
-                    true
+                    true // action bar
             );
             return ItemStack.EMPTY;
         }
 
+        // If it didn't fail completely, did they do a bad job?
         if (roll < failChance + poorChance) {
-            // scuffed craft — only applies to damageable items (tools, weapons, armor)
+            // A "poor quality" craft means the item comes out heavily damaged.
+            // But this obviously only works on items that actually HAVE durability (tools/armor).
             ItemStack poor = originalStack.copy();
             int maxDmg = poor.getMaxDamage();
 
+            // If it's a damageable item...
             if (maxDmg > 0) {
+                // Calculate how much durability they should be left with based on the config percentage.
                 int remaining = Math.max(1, (int) Math.round(maxDmg * KnowledgeBoundConfig.INSTANCE.poorDurabilityFraction));
+                
+                // Damage the item. (Note: setDamage sets how much damage it has TAKEN, not how much is left)
                 int damage = maxDmg - remaining;
                 poor.setDamage(damage);
 
-                // send poor quality actionbar
                 player.sendMessage(
                         KnowledgeBoundTextFormatter.craftingQuality(knowledgeId, "poor"),
-                        true
+                        true // action bar
                 );
                 return poor;
             }
-            // non-damageable items can't be "poor quality" — fall through to normal craft
+            // If it's not damageable (like crafting a bed or a bookshelf), it can't really
+            // be "poor quality". We just let it succeed normally.
         }
 
-        // normal craft
+        // The craft succeeded perfectly!
         player.sendMessage(
                 KnowledgeBoundTextFormatter.craftingQuality(knowledgeId, "normal"),
-                true
+                true // action bar
         );
         return originalStack;
     }

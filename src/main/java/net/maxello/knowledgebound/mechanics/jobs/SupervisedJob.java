@@ -10,8 +10,14 @@ import net.minecraft.world.World;
 import java.util.UUID;
 
 /**
- * Represents an active supervised workstation job (smelting or cooking).
- * The player must keep the furnace UI open to supervise the job.
+ * A data object representing a single active "supervised" workstation job.
+ * 
+ * "Supervising" means a player has to physically keep the furnace/smoker UI open
+ * while an item is cooking. If they walk away or close the screen, the job enters
+ * a "grace period". If the grace period expires before they return, the item burns up!
+ * 
+ * We also have a "collection window". Once the item finishes cooking, the player
+ * has a few seconds to take it out before it cools down and ruins the item.
  */
 public class SupervisedJob {
 
@@ -20,16 +26,17 @@ public class SupervisedJob {
     }
 
     public enum JobState {
-        /** Player is viewing the furnace UI and the job is progressing. */
+        /** The player is actively staring at the furnace UI. Everything is fine. */
         ACTIVE,
-        /** Player closed the UI — grace timer is counting down. */
+        /** The player closed the UI! The grace timer is counting down. Hurry back! */
         GRACE_PERIOD,
-        /** Smelting/cooking completed — waiting for player to collect the result. */
+        /** The item is done cooking. The player must grab it from the output slot now. */
         COMPLETED,
-        /** Job has been failed or cancelled. */
+        /** The player messed up, walked away, or took too long. The job is ruined. */
         FAILED
     }
 
+    // Who owns this job? We use UUIDs so we don't accidentally hold a memory leak to a disconnected player.
     private final UUID ownerUuid;
     private final RegistryKey<World> dimension;
     private final BlockPos furnacePos;
@@ -73,8 +80,8 @@ public class SupervisedJob {
     // --- State transitions ---
 
     /**
-     * Called when the owner closes the furnace UI.
-     * Starts the grace period timer.
+     * Oh no, the player closed the furnace screen!
+     * Start the countdown timer. If this hits 0, they fail the job.
      */
     public void startGracePeriod(int graceTicks) {
         this.state = JobState.GRACE_PERIOD;
@@ -82,7 +89,8 @@ public class SupervisedJob {
     }
 
     /**
-     * Called when the owner reopens the same furnace within the grace period.
+     * Phew, they reopened the furnace screen in time.
+     * Clear the timer and go back to normal.
      */
     public void resumeFromGrace() {
         this.state = JobState.ACTIVE;
@@ -90,8 +98,8 @@ public class SupervisedJob {
     }
 
     /**
-     * Called when the furnace finishes smelting/cooking.
-     * Starts the collection window timer.
+     * Ding! The furnace finished cooking the item.
+     * Start the collection countdown. They better grab it quick.
      */
     public void markCompleted(int collectionTicks) {
         this.state = JobState.COMPLETED;
@@ -99,14 +107,15 @@ public class SupervisedJob {
     }
 
     /**
-     * Called when the job fails (grace expired, collection expired, disconnect, etc.).
+     * Welp, they failed. The job is marked dead and the manager will clean it up.
      */
     public void markFailed() {
         this.state = JobState.FAILED;
     }
 
     /**
-     * Tick the job timers. Returns true if the job should be removed (failed).
+     * Ticks down the timers every server tick.
+     * Returns true if the job just failed and needs to be deleted.
      */
     public boolean tick() {
         switch (state) {
@@ -128,22 +137,22 @@ public class SupervisedJob {
                 return true;
             }
             default -> {
-                // ACTIVE — no timer to tick
+                // ACTIVE — The player is staring at the screen, so no timer is ticking.
             }
         }
         return false;
     }
 
     /**
-     * Check if a given player is the owner of this job.
+     * Simple check to make sure the person trying to interact with the furnace
+     * is the actual person who started the job. (No stealing other people's smelting jobs!)
      */
     public boolean isOwner(UUID playerUuid) {
         return ownerUuid.equals(playerUuid);
     }
 
-    /**
-     * Get the appropriate config values for this job type.
-     */
+    // --- Config Helpers ---
+
     public int getConfigGraceTicks() {
         KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
         return jobType == JobType.SMELTING

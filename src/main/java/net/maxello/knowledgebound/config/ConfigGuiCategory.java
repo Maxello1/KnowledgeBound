@@ -11,7 +11,9 @@ import java.util.Map;
 
 /**
  * Registry of config categories for the admin GUI.
- * Each category has a name, icon, and list of editable entries.
+ * Think of this as the main menu definitions for the chest GUI you see in-game.
+ * Each category gets its own display name, a cool little icon (like a sword or a pickaxe),
+ * and a list of all the settings you can actually tweak inside that category.
  */
 public final class ConfigGuiCategory {
 
@@ -38,6 +40,8 @@ public final class ConfigGuiCategory {
 
     public static ConfigGuiCategory get(String id) { return CATEGORIES.get(id); }
 
+    // This is where we load up all the different categories.
+    // It's called once during startup to populate the CATEGORIES map.
     public static void init() {
         CATEGORIES.clear();
 

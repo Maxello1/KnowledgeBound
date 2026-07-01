@@ -3,6 +3,9 @@ package net.maxello.knowledgebound.config;
 import net.maxello.knowledgebound.KnowledgeBound;
 /**
  * Represents a single editable config field in the admin GUI.
+ * Basically, this holds all the metadata for a setting: what it's called,
+ * a helpful description so players know what it does, its data type, and the limits (min/max).
+ * We also keep track of "step" sizes for when you click to increase/decrease the value.
  */
 public final class ConfigGuiEntry {
 
@@ -42,8 +45,10 @@ public final class ConfigGuiEntry {
     public double getSmallStep() { return smallStep; }
     public double getLargeStep() { return largeStep; }
 
-    // Convenience factories
+    // Convenience factories so we don't have to write out the Builder boilerplate
+    // every single time we want to define a new setting.
 
+    // Super simple factory for boolean toggles (on/off).
     public static ConfigGuiEntry bool(String path, String name, String desc) {
         return new Builder(path, name, desc, EntryType.BOOLEAN).build();
     }

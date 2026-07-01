@@ -8,19 +8,32 @@ import net.minecraft.util.Identifier;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * The grand library of every single item that requires a specific skill to craft.
+ * 
+ * When a player pulls an item out of a crafting table, we check this registry.
+ * If the item is in here, we look up its associated CraftingKnowledgeRule (which tells us
+ * if it's Carpentry, Toolsmithing, etc.) and what tier it requires.
+ * 
+ * We hardcode hundreds of vanilla items here so the mod works out of the box, but
+ * server admins can override these tiers or add modded items via the config.
+ */
 public class CraftingRuleRegistry {
 
-    // rule map
+    // Maps a specific item (like "minecraft:iron_sword") to the rule that governs it.
     private static final Map<Identifier, CraftingKnowledgeRule> RULES_BY_ITEM = new HashMap<>();
 
-    // tier map
+    // Maps an item to its required tier (0 = Wood, 1 = Stone, etc.)
     private static final Map<Identifier, Integer> ITEM_TIERS = new HashMap<>();
 
-    // items that are completely blocked from crafting
+    // A blacklist of items that simply cannot be crafted under any circumstances.
+    // E.g. we block vanilla boats so players are forced to use alternative transport.
     private static final java.util.Set<Identifier> BLOCKED_ITEMS = new java.util.HashSet<>();
 
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering crafting knowledge rules…");
+        
+        // Go through and register all our hardcoded vanilla mappings
         registerToolRules();
         registerArmorRules();
         registerWeaponRules();
@@ -28,21 +41,30 @@ public class CraftingRuleRegistry {
         registerMasonryRules();
         registerJewellerRules();
         registerBlockedItems();
+        
+        // Finally, load overrides from the config file so admins have the final say.
         loadConfigOverrides();
     }
 
+    /** Grab the rule for a specific item. Returns null if it's unrestricted. */
     public static CraftingKnowledgeRule getForItem(Identifier itemId) {
         return RULES_BY_ITEM.get(itemId);
     }
 
+    /** Grab the required tier for a specific item. Returns 0 (unrestricted) if unknown. */
     public static int getItemTier(Identifier itemId) {
         return ITEM_TIERS.getOrDefault(itemId, 0);
     }
 
+    /** Check if an item is blacklisted entirely. */
     public static boolean isBlocked(Identifier itemId) {
         return BLOCKED_ITEMS.contains(itemId);
     }
 
+    /**
+     * A handy little helper to register a bunch of items to a rule and tier all at once.
+     * Saves us from writing thousands of lines of map.put() calls.
+     */
     private static void registerWithTier(CraftingKnowledgeRule rule, int itemTier, Identifier... itemIds) {
         for (Identifier itemId : itemIds) {
             RULES_BY_ITEM.put(itemId, rule);
@@ -50,14 +72,20 @@ public class CraftingRuleRegistry {
         }
     }
 
+    /**
+     * Applies any custom tier assignments from the server config.
+     * This overwrites our hardcoded vanilla tiers if there's a conflict.
+     */
     private static void loadConfigOverrides() {
         Map<String, Integer> overrides = KnowledgeBoundConfig.INSTANCE.itemCraftingTierOverrides;
         if (overrides == null) return;
+        
         for (Map.Entry<String, Integer> entry : overrides.entrySet()) {
             try {
                 Identifier id = Identifier.of(entry.getKey());
                 ITEM_TIERS.put(id, entry.getValue());
             } catch (Exception e) {
+                // Better to skip a bad config line than crash the server during init.
                 KnowledgeBound.LOGGER.warn("[KnowledgeBound] Invalid itemCraftingTierOverrides key: {}", entry.getKey());
             }
         }

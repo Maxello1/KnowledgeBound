@@ -13,18 +13,29 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Tracks blocks placed by players so that player-placed ores
- * don't become renewable through the ore respawn system.
+ * A simple tracker that remembers exactly which blocks a player has placed down.
+ * 
+ * Why do we need this? Because of the Ore Respawn system! 
+ * If a player mines an iron ore, it gets replaced by a placeholder and then respawns later.
+ * But what if a player mines an iron ore, picks it up (with Silk Touch), and places it back down?
+ * We don't want them to mine that same placed block and trigger the respawn logic again.
+ * That would lead to infinite ore farming. So we track player-placed blocks here.
  */
 public final class PlayerPlacedBlockTracker {
 
     private PlayerPlacedBlockTracker() {}
 
+    // The key used to save this data into the world's level.dat folder.
     private static final String STATE_KEY = "knowledgebound_player_placed";
 
     // --- PersistentState ---
 
+    /**
+     * Minecraft's built-in way to save arbitrary data to the world save file.
+     * We just store a massive set of coordinates where players have placed blocks.
+     */
     public static class PlacedBlockState extends PersistentState {
+        // A HashSet is perfect here because we just need to do extremely fast lookups.
         public final Set<BlockPos> placedPositions = new HashSet<>();
 
         public PlacedBlockState() {}
@@ -66,17 +77,24 @@ public final class PlayerPlacedBlockTracker {
     // --- Public API ---
 
     /**
-     * Record that a player placed a block at this position.
-     * Only tracks positions for blocks in the respawnable ore list.
+     * Called whenever a player right-clicks to place a block.
+     * We only bother recording this if the block they placed is an ore that
+     * is eligible for respawning (handled upstream).
      */
     public static void onPlayerPlace(ServerWorld world, BlockPos pos) {
         PlacedBlockState state = getState(world);
+        
+        // We have to call .toImmutable() because sometimes BlockPos instances 
+        // are mutable and recycled by Minecraft, which would corrupt our HashSet!
         state.placedPositions.add(pos.toImmutable());
+        
+        // Tells Minecraft "hey, this data changed, make sure you save it to disk eventually".
         state.markDirty();
     }
 
     /**
-     * Remove tracking when a block is broken at this position.
+     * Called whenever ANY block is broken. 
+     * If they broke a block we were tracking, we remove it from the list to free up memory.
      */
     public static void onBlockBreak(ServerWorld world, BlockPos pos) {
         PlacedBlockState state = getState(world);
@@ -86,7 +104,9 @@ public final class PlayerPlacedBlockTracker {
     }
 
     /**
-     * Check if a block at this position was placed by a player.
+     * The core check used by the mining event.
+     * If this returns true, the block was placed by a player, so we do NOT
+     * trigger any ore respawn logic.
      */
     public static boolean isPlayerPlaced(ServerWorld world, BlockPos pos) {
         return getState(world).placedPositions.contains(pos);

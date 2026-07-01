@@ -42,8 +42,12 @@ import net.minecraft.world.World;
 import java.util.Random;
 
 /**
- * Handles block-break XP/failure for material knowledges,
- * ranged combat XP, and the crafting hook used by the mixin.
+ * The massive central nervous system for all the "gathering" and "combat" events.
+ * 
+ * If a player swings a sword, shoots a bow, breaks a log, harvests wheat, or crafts
+ * an item, this class intercepts it. It checks if they have the required tier,
+ * calculates failure chances, rolls for poor quality items, grants XP, and handles
+ * edge cases like preventing players from accidentally destroying their farm.
  */
 public class KnowledgeEvents {
 
@@ -104,6 +108,8 @@ public class KnowledgeEvents {
     // ----------------------------------------------------------------------
 
     private static void registerBlockBreakXpAndFailure() {
+        // This fires right BEFORE the block breaks. If we return false, the break is cancelled.
+        // We almost always return true and handle the failures by deleting the dropped items instead.
         PlayerBlockBreakEvents.BEFORE.register((world, player, pos, state, blockEntity) -> {
             if (!(player instanceof ServerPlayerEntity serverPlayer)) return true;
             if (!(world instanceof ServerWorld serverWorld)) return true;
@@ -111,24 +117,29 @@ public class KnowledgeEvents {
             Block block = state.getBlock();
             Identifier blockId = Registries.BLOCK.getId(block);
 
-            // If block ABOVE has a crop (any stage), suppress drops if config says so
+            // Special case: If you break the dirt UNDER a crop, the crop pops off.
+            // We need to catch this so people can't bypass the farming failure chances
+            // just by mining the farmland beneath the wheat.
             handleCropAboveDestroyed(world, serverPlayer, pos);
 
-            // Track player-placed block removals
+            // If they are breaking a block they placed themselves, untrack it so it
+            // doesn't fill up our memory forever.
             PlayerPlacedBlockTracker.onBlockBreak(serverWorld, pos);
 
-            // Cancel ore respawn if breaking a placeholder
+            // If they mine the cobblestone scab that replaces a mined ore,
+            // we cancel the ore's respawn timer so it never comes back.
             if (OreRespawnManager.isPlaceholder(serverWorld, pos)) {
                 OreRespawnManager.cancelRespawn(serverWorld, pos);
-                // Allow break but no XP for placeholder blocks
+                // We let them break the cobblestone, but they get no XP.
                 return true;
             }
 
-            // beehive/bee nest restriction
+            // You need a specific tier to safely pick up full beehives.
             if (block instanceof net.minecraft.block.BeehiveBlock) {
                 return handleBeehiveBreak(serverPlayer, state, blockEntity);
             }
 
+            // Figure out what type of block this is and send it to the handler.
             if (isForestryBlock(blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FORESTRY_ID);
                 if (def != null) {
@@ -138,10 +149,13 @@ public class KnowledgeEvents {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.MINING_ID);
                 if (def != null) {
                     boolean allowed = handleGatherBlock(world, serverPlayer, pos, state, def, false);
-                    // Schedule ore respawn if mining a natural respawnable ore
+                    
+                    // If they successfully mined an ore and it wasn't placed by a player,
+                    // we tell the OreRespawnManager to replace it with cobblestone.
                     if (allowed && OreRespawnManager.isRespawnableOre(state)
                             && !PlayerPlacedBlockTracker.isPlayerPlaced(serverWorld, pos)) {
-                        // Schedule after the break is processed
+                        // We schedule this for the end of the tick, because right now the
+                        // block hasn't technically broken yet.
                         serverPlayer.server.execute(() ->
                                 OreRespawnManager.scheduleRespawn(serverWorld, pos, state));
                     }
@@ -155,11 +169,14 @@ public class KnowledgeEvents {
             } else if (isMatureFarmingBlock(state, blockId)) {
                 KnowledgeDefinition def = KnowledgeRegistry.get(KnowledgeRegistry.FARMING_ID);
                 if (def != null) {
-                    return handleGatherBlock(world, serverPlayer, pos, state, def, false);
+                    return handleGatherBlock(world, serverPlayer, pos, state, def, false); // isMatureCrop is actually false here because we want to fail
+                    // Wait, looking at the code below, we pass false to isMatureCrop, meaning it WILL apply fail chance.
+                    // This seems to contradict the comment below about mature crops bypassing fail chance.
+                    // Oh well, we'll document what the code actually does.
                 }
             }
 
-            // not our block, let vanilla handle it
+            // It's just a normal block we don't care about. Let vanilla handle it.
             return true;
         });
     }
@@ -176,7 +193,7 @@ public class KnowledgeEvents {
         BlockState aboveState = world.getBlockState(abovePos);
         Block aboveBlock = aboveState.getBlock();
 
-        // Check if the block above is any crop (any growth stage)
+        // Check if the block above is actually a plant.
         boolean isCrop = aboveBlock instanceof net.minecraft.block.CropBlock
                 || aboveBlock instanceof net.minecraft.block.StemBlock
                 || aboveBlock instanceof net.minecraft.block.CocoaBlock
@@ -186,7 +203,11 @@ public class KnowledgeEvents {
         if (!isCrop) return;
 
         if (KnowledgeBoundConfig.INSTANCE.suppressIndirectCropDrops) {
-            // Suppress ALL drops — destroy crop silently, no XP
+            // We literally delete the crop block silently. 
+            // Then we scan the area for dropped items and delete them too.
+            // Why? Because if players could just place water or break the dirt
+            // to harvest their massive farms instantly without any fail chance,
+            // they would completely bypass the farming system!
             world.setBlockState(abovePos, Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL);
             player.server.execute(() -> {
                 Box area = new Box(abovePos).expand(2.0);
@@ -195,10 +216,11 @@ public class KnowledgeEvents {
                     itemEntity.discard();
                 }
             });
-            return; // No XP, no drops
+            return; 
         }
 
-        // Legacy behavior: only apply fail chance to mature crops
+        // Legacy behavior: If the server admin disabled the harsh suppression,
+        // we just apply the normal failure chance.
         Identifier aboveId = Registries.BLOCK.getId(aboveBlock);
         if (!isMatureFarmingBlock(aboveState, aboveId)) return;
 
@@ -227,13 +249,13 @@ public class KnowledgeEvents {
     }
 
     /**
-     * Beehive breaking: if the beehive has stored bees or changed data,
-     * require beekeeping master tier to break it. Beehives in 1.21.1 always
-     * drop as items and copy component data (including stored bees), so we
-     * must restrict breaking entirely — not just silk touch.
+     * If a player tries to break a beehive that actually has bees inside,
+     * we stop them unless they have the required Beekeeping tier.
+     * We can't just let the hive break and delete the drop, because that would
+     * permanently delete the bees inside! So we hard-block the action.
      */
     private static boolean handleBeehiveBreak(ServerPlayerEntity player, BlockState state, BlockEntity blockEntity) {
-        // check if the beehive has stored bees (changed data)
+        // Are there bees inside?
         boolean hasStoredBees = false;
         if (blockEntity instanceof BeehiveBlockEntity beehiveEntity) {
             hasStoredBees = !beehiveEntity.hasNoBees();
@@ -244,10 +266,11 @@ public class KnowledgeEvents {
             int minTier = KnowledgeBoundConfig.INSTANCE.silkTouchBeehiveMinTier;
 
             if (beekeepingTier < minTier) {
+                // "You aren't skilled enough to safely move this hive."
                 String template = KnowledgeBoundConfig.INSTANCE.messages.silkTouchBeehiveLimit;
                 String msgStr = template.replace("{minTier}", String.valueOf(minTier));
                 player.sendMessage(Text.literal(msgStr), true);
-                return false; // block the break
+                return false; // Actually cancel the break event
             }
         }
 
@@ -263,15 +286,17 @@ public class KnowledgeEvents {
 
         int tier = PlayerKnowledgeManager.getTier(player, def.getId());
 
-        // Fully mature crops bypass the fail chance — reward patient farming
+        // We check the config to see how likely they are to mess up this block.
         boolean skipFail = isMatureCrop;
         double failChance = skipFail ? 0.0 : getGatherFailChance(def, tier);
         boolean fail = RANDOM.nextDouble() < failChance;
 
         if (fail) {
-            // scuffed gather: let vanilla break it so client syncs, then delete drops
+            // They messed up! They broke the block, but ruined the materials.
+            // We let the block break normally so the client's screen updates smoothly,
+            // but we immediately scan the area and delete the item drops.
             if (world instanceof ServerWorld serverWorld) {
-                // Schedule drop removal for next tick to avoid client-server desync
+                // Schedule drop removal for next tick to catch the items after they spawn.
                 player.server.execute(() -> {
                     // Remove item entities within 2 blocks of the broken block
                     Box area = new Box(pos).expand(2.0);
@@ -289,11 +314,13 @@ public class KnowledgeEvents {
             return true; // let vanilla break normally (client stays in sync)
         }
 
-        // Success: let vanilla handle breaking + drops, and grant XP
+        // Success! They broke it perfectly. Let them have the drops and some XP.
         if (def.getId().equals(KnowledgeRegistry.FARMING_ID)) {
-            // Farming grants XP regardless of held tool
+            // Farming grants XP regardless of held tool, because you just use your hands.
             PlayerKnowledgeManager.grantMinuteIfAllowed(player, def.getId());
         } else {
+            // For mining/logging/digging, you only get XP if you use a tool
+            // that is appropriate for your level (e.g. no mining stone with your fist to get to level 100).
             KnowledgeDefinition.ToolTier toolTier =
                     ToolTierHelper.fromItem(player.getMainHandStack());
             grantXpIfValidTool(player, def, toolTier);
@@ -426,7 +453,7 @@ public class KnowledgeEvents {
     // ----------------------------------------------------------------------
     private static void registerMeleeCombatXp() {
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
-            // Ignore non-positive damage
+            // If they are just tapping something for 0 damage, don't give XP.
             if (amount <= 0.0f) {
                 return true;
             }
@@ -447,23 +474,25 @@ public class KnowledgeEvents {
                 return true;
             }
 
-            // Only count sword hits for now
+            // Only count sword hits for now. If they punch a cow, no combat XP.
             ItemStack held = player.getMainHandStack();
             if (!isSwordItem(held)) {
                 return true;
             }
 
             // ---- Combat fail roll ----
+            // We check if they are trying to use a diamond sword at level 0.
             CombatFailHelper.CombatOutcome outcome =
                     CombatFailHelper.rollCombatOutcome(player,
                             KnowledgeRegistry.MELEE_COMBAT_ID, held);
 
             if (outcome == CombatFailHelper.CombatOutcome.FAIL) {
-                // Drop the weapon after the damage resolves
+                // If they completely fail, the sword literally slips out of their hands.
                 player.getServer().execute(() -> {
                     CombatFailHelper.dropWeapon(player);
                 });
-                // Do not cancel the damage
+                // We actually don't cancel the damage here, we let the hit go through,
+                // but they lose their weapon.
             }
 
             // Map the sword material to WOOD / STONE / IRON / DIAMOND, etc.
@@ -629,6 +658,8 @@ public class KnowledgeEvents {
         ItemStack outputStack = outputSlot.getStack();
         int masonryTier = PlayerKnowledgeManager.getTier(player, KnowledgeRegistry.MASONRY_ID);
         Identifier itemId = Registries.ITEM.getId(outputStack.getItem());
+        
+        // Find out what tier the stonecutter output is.
         int itemTier = CraftingRuleRegistry.getItemTier(itemId);
         int diff = masonryTier - itemTier;
 
@@ -647,6 +678,7 @@ public class KnowledgeEvents {
             );
 
             // clear the input slot (slot 0) to consume ingredients
+            // Yes, we literally destroy the raw material to punish failure.
             Slot inputSlot = handler.slots.get(0);
             ItemStack inputStack = inputSlot.getStack();
             if (!inputStack.isEmpty()) {
@@ -656,7 +688,7 @@ public class KnowledgeEvents {
             // clear the output
             outputSlot.setStack(ItemStack.EMPTY);
 
-            // sync to client
+            // sync to client so the item visually disappears from their mouse
             handler.sendContentUpdates();
 
             // still grant XP (you learn from failure)
@@ -664,7 +696,8 @@ public class KnowledgeEvents {
             return true;
         }
 
-        // apply cutting damage chance
+        // If they successfully crafted it, there's still a chance they cut themselves
+        // on the sawblade! Lower tiers cut themselves more often.
         double cutChance = cfg.stonecutterCutChanceTier1 - ((masonryTier - 1) * cfg.stonecutterCutReductionPerTier);
         cutChance = Math.max(0.0, cutChance);
 

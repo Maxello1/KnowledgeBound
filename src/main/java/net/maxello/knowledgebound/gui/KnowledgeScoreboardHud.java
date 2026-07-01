@@ -14,8 +14,9 @@ import java.util.*;
 
 /**
  * Server-side scoreboard HUD that shows knowledge tiers and progress.
- * Toggleable per-player via /kb hud. When toggled off, the sidebar
- * returns to whatever it was before (or nothing).
+ * This is an alternative to the client-side HUD. We just abuse the vanilla scoreboard 
+ * sidebar to show text. If they type /kb hud to turn it off, we carefully put back 
+ * whatever scoreboard they were looking at before (if any).
  */
 public final class KnowledgeScoreboardHud {
 
@@ -58,6 +59,7 @@ public final class KnowledgeScoreboardHud {
 
     /**
      * Toggle the HUD for a player. Returns true if it's now ON.
+     * We just check if they're in our list, and flip them to the other state.
      */
     public static boolean toggle(ServerPlayerEntity player) {
         UUID uuid = player.getUuid();

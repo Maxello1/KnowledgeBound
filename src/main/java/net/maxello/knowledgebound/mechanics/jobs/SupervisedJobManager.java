@@ -18,17 +18,31 @@ import net.minecraft.util.math.BlockPos;
 import java.util.*;
 
 /**
- * Manages all active supervised workstation jobs (smelting and cooking).
- * Jobs are NOT persisted across restarts — disconnecting/restart = fail.
+ * The big boss that keeps track of everyone staring at furnaces.
+ * 
+ * When a player puts an iron ore into a furnace, this manager creates a `SupervisedJob`
+ * and starts watching them. It checks if they walk away, checks if they grab the item
+ * in time, and ultimately rolls the dice to see if they successfully smelted the item
+ * or if they ruined it.
+ * 
+ * Note: Jobs are not saved to the hard drive. If the server crashes or restarts,
+ * all currently smelting items are considered abandoned and will fail.
  */
 public final class SupervisedJobManager {
 
     private SupervisedJobManager() {}
 
-    /** Active jobs keyed by "dimension:x,y,z" string for uniqueness across dimensions. */
+    /** 
+     * All the jobs currently happening on the server.
+     * We use a string like "minecraft:overworld:10,64,-20" to make sure we don't
+     * confuse a furnace in the nether with one in the overworld at the same coords.
+     */
     private static final Map<String, SupervisedJob> ACTIVE_JOBS = new HashMap<>();
 
-    /** Maps player UUID to the furnace position they are currently supervising. */
+    /** 
+     * A quick lookup table to find out which furnace a specific player is currently using. 
+     * You can only supervise one furnace at a time!
+     */
     private static final Map<UUID, String> PLAYER_TO_JOB = new HashMap<>();
 
     public static void init() {
@@ -38,6 +52,7 @@ public final class SupervisedJobManager {
 
     // --- Key helpers ---
 
+    /** Makes our unique string identifier for a specific block in a specific dimension. */
     private static String posKey(ServerWorld world, BlockPos pos) {
         return world.getRegistryKey().getValue() + ":" + pos.getX() + "," + pos.getY() + "," + pos.getZ();
     }
@@ -57,7 +72,7 @@ public final class SupervisedJobManager {
     // --- Public API ---
 
     /**
-     * Check if a furnace at the given position is being supervised by any player.
+     * Is someone currently babysitting this furnace?
      */
     public static boolean isSupervised(ServerWorld world, BlockPos pos) {
         return ACTIVE_JOBS.containsKey(posKey(world, pos));
@@ -78,7 +93,8 @@ public final class SupervisedJobManager {
     );
 
     /**
-     * Check if a specific input item is a metallurgy item (for smelting supervision).
+     * Is this item something that requires the Smelting job?
+     * e.g. Iron ore yes, Cobblestone no.
      */
     public static boolean isMetallurgyItem(Identifier itemId) {
         String id = itemId.toString();
@@ -89,7 +105,6 @@ public final class SupervisedJobManager {
         return DEFAULT_METALLURGY_ITEMS.contains(id);
     }
 
-    /** Hardcoded vanilla food items that require cooking supervision. */
     private static final Set<String> DEFAULT_COOKING_ITEMS = Set.of(
             "minecraft:beef", "minecraft:porkchop", "minecraft:chicken",
             "minecraft:mutton", "minecraft:rabbit", "minecraft:cod",
@@ -97,8 +112,7 @@ public final class SupervisedJobManager {
     );
 
     /**
-     * Check if a specific input item is a cooking item.
-     * Uses config list if populated, otherwise falls back to hardcoded defaults.
+     * Is this item something that requires the Cooking job?
      */
     public static boolean isCookingItem(Identifier itemId) {
         String id = itemId.toString();
@@ -110,7 +124,8 @@ public final class SupervisedJobManager {
     }
 
     /**
-     * Determine the job type for an input item, or null if not supervised.
+     * Figure out what kind of job this item triggers, or null if it's just a normal
+     * item that anyone can smelt without paying attention (like sand into glass).
      */
     public static SupervisedJob.JobType getJobTypeForItem(Identifier itemId) {
         if (isMetallurgyItem(itemId)) return SupervisedJob.JobType.SMELTING;
@@ -119,26 +134,27 @@ public final class SupervisedJobManager {
     }
 
     /**
-     * Start a new supervised job when a player places a tracked item in a furnace.
+     * A player just put a tracked item into a furnace. Let's start the timer!
      */
     public static SupervisedJob startJob(ServerPlayerEntity player, ServerWorld world,
                                           BlockPos furnacePos, SupervisedJob.JobType jobType,
                                           Identifier inputItemId) {
         String key = posKey(world, furnacePos);
 
-        // Don't start if another job is already active at this position
+        // Can't start a job if someone else is already smelting something here!
         if (ACTIVE_JOBS.containsKey(key)) return null;
 
-        // Get recipe tier (from config, default 0)
+        // Figure out how hard this item is to smelt.
         int recipeTier = getRecipeTier(jobType, inputItemId);
 
-        // Check if player meets minimum tier
+        // Does the player even know how to do this?
         Identifier knowledgeId = jobType == SupervisedJob.JobType.SMELTING
                 ? KnowledgeRegistry.SMELTING_ID
                 : KnowledgeRegistry.COOKING_ID;
         int playerTier = PlayerKnowledgeManager.getTier(player, knowledgeId);
 
         if (playerTier < recipeTier) {
+            // Nope, they are too low level.
             String msg = jobType == SupervisedJob.JobType.SMELTING
                     ? KnowledgeBoundConfig.INSTANCE.messages.smeltingTierLocked
                     : KnowledgeBoundConfig.INSTANCE.messages.smeltingTierLocked; // reuse for now
@@ -147,6 +163,7 @@ public final class SupervisedJobManager {
             return null;
         }
 
+        // Everything looks good, create the job.
         SupervisedJob job = new SupervisedJob(
                 player.getUuid(),
                 world.getRegistryKey(),
@@ -166,7 +183,9 @@ public final class SupervisedJobManager {
     }
 
     /**
-     * Called when a player closes a furnace screen.
+     * The player closed the furnace UI. 
+     * We don't fail them immediately, because maybe they just quickly checked their inventory.
+     * But we do start the countdown!
      */
     public static void onPlayerCloseScreen(ServerPlayerEntity player) {
         String key = PLAYER_TO_JOB.get(player.getUuid());
@@ -183,17 +202,18 @@ public final class SupervisedJobManager {
     }
 
     /**
-     * Called when a player opens a furnace screen. Resumes grace period if applicable.
-     * Returns true if the player is allowed to open the furnace.
+     * Called when a player opens a furnace screen. 
+     * If they were in the grace period, they are saved!
+     * Returns true if they are allowed to open it, false if it's someone else's furnace.
      */
     public static boolean onPlayerOpenScreen(ServerPlayerEntity player, ServerWorld world, BlockPos pos) {
         String key = posKey(world, pos);
         SupervisedJob job = ACTIVE_JOBS.get(key);
 
-        if (job == null) return true; // no active job, allow
+        if (job == null) return true; // It's just a normal furnace, let them open it.
 
         if (job.isOwner(player.getUuid())) {
-            // Owner is returning
+            // It's their furnace! Welcome back.
             if (job.getState() == SupervisedJob.JobState.GRACE_PERIOD) {
                 job.resumeFromGrace();
                 PLAYER_TO_JOB.put(player.getUuid(), key);
@@ -202,7 +222,7 @@ public final class SupervisedJobManager {
             }
             return true;
         } else {
-            // Different player — block access
+            // Hey, get out of there, that's not yours!
             player.sendMessage(net.minecraft.text.Text.literal(
                     KnowledgeBoundConfig.INSTANCE.messages.furnaceBusy), true);
             return false;
@@ -210,7 +230,8 @@ public final class SupervisedJobManager {
     }
 
     /**
-     * Called when smelting/cooking completes at a furnace position.
+     * The little white arrow in the furnace UI reached 100%. 
+     * The item is done, but they have to pull it out quickly!
      */
     public static void onSmeltComplete(ServerWorld world, BlockPos pos) {
         String key = posKey(world, pos);
@@ -222,8 +243,9 @@ public final class SupervisedJobManager {
     }
 
     /**
-     * Called when the player collects the result from a supervised furnace.
-     * Performs the success roll and grants XP.
+     * They clicked the output slot to grab their shiny new ingot or steak!
+     * Now we roll the dice to see if they actually did a good job, or if they
+     * messed up the temperature and ruined it at the last second.
      */
     public static boolean onItemCollected(ServerPlayerEntity player, ServerWorld world, BlockPos pos) {
         String key = posKey(world, pos);
@@ -232,45 +254,46 @@ public final class SupervisedJobManager {
 
         if (!job.isOwner(player.getUuid())) return false; // wrong player
 
-        // Perform success roll
+        // Calculate their chances based on their tier vs the recipe tier.
         Identifier knowledgeId = job.getJobType() == SupervisedJob.JobType.SMELTING
                 ? KnowledgeRegistry.SMELTING_ID
                 : KnowledgeRegistry.COOKING_ID;
         int playerTier = PlayerKnowledgeManager.getTier(player, knowledgeId);
-        int diff = playerTier - job.getRecipeTier();
-
+        
         KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
         KnowledgeBoundConfig.GatherFailConfig failConfig =
                 job.getJobType() == SupervisedJob.JobType.SMELTING
                         ? cfg.smeltingFailChances
                         : cfg.cookingFailChances;
+        
         double failChance = failConfig.getForTier(playerTier);
-
         boolean fail = new Random().nextDouble() < failChance;
 
-        // Clean up the job
+        // Either way, the job is over now. Clean up.
         ACTIVE_JOBS.remove(key);
         PLAYER_TO_JOB.remove(player.getUuid());
 
         if (fail) {
+            // Oh no, they burned it!
             String msg = job.getJobType() == SupervisedJob.JobType.SMELTING
                     ? cfg.messages.smeltingFail
                     : cfg.messages.cookingFail;
             player.sendMessage(net.minecraft.text.Text.literal(msg), true);
-            return false; // consume the output (fail)
+            return false; // returning false tells our mixin to delete the item from their mouse
         }
 
-        // Success — grant XP
+        // Success! Give them their item and some XP.
         PlayerKnowledgeManager.grantMinuteIfAllowed(player, knowledgeId);
         String msg = job.getJobType() == SupervisedJob.JobType.SMELTING
                 ? cfg.messages.smeltingSuccess
                 : cfg.messages.cookingSuccess;
         player.sendMessage(net.minecraft.text.Text.literal(msg), true);
+        
         return true; // allow collection
     }
 
     /**
-     * Called when a player disconnects. Fail their active job.
+     * If they log out while smelting, the job is instantly abandoned and ruined.
      */
     public static void onPlayerDisconnect(ServerPlayerEntity player) {
         String key = PLAYER_TO_JOB.remove(player.getUuid());
@@ -284,6 +307,9 @@ public final class SupervisedJobManager {
 
     // --- Internal ---
 
+    /**
+     * Looks up how hard a specific item is to smelt.
+     */
     private static int getRecipeTier(SupervisedJob.JobType jobType, Identifier inputItemId) {
         Map<String, Integer> tiers = jobType == SupervisedJob.JobType.SMELTING
                 ? KnowledgeBoundConfig.INSTANCE.smeltingRecipeTiers
@@ -291,20 +317,23 @@ public final class SupervisedJobManager {
         return tiers.getOrDefault(inputItemId.toString(), 0);
     }
 
+    /**
+     * Punish the player for failing a job (walking away, logging out, taking too long).
+     */
     private static void handleJobFail(ServerPlayerEntity player, SupervisedJob job) {
         KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
 
-        // Determine fail behavior
+        // Figure out what message to show them based on how they failed.
         String leaveBehaviour = job.getConfigLeaveBehaviour();
         String msg;
 
         if (job.getState() == SupervisedJob.JobState.COMPLETED) {
-            // Collection window expired
+            // Collection window expired (they didn't grab the item fast enough)
             msg = job.getJobType() == SupervisedJob.JobType.SMELTING
                     ? cfg.messages.smeltingCollectionExpired
                     : cfg.messages.cookingCollectionExpired;
         } else {
-            // Left unattended
+            // Left unattended (they walked away or closed the UI for too long)
             msg = job.getJobType() == SupervisedJob.JobType.SMELTING
                     ? cfg.messages.smeltingLeftUnattended
                     : cfg.messages.cookingLeftUnattended;
@@ -314,16 +343,20 @@ public final class SupervisedJobManager {
             player.sendMessage(net.minecraft.text.Text.literal(msg), true);
         }
 
-        // Handle the furnace
+        // Mark the internal state so the mixin knows to delete the items.
         if ("FAIL".equalsIgnoreCase(leaveBehaviour)) {
-            // Consume input, clear output — handled by the furnace mixin checking job state
+            // We are going to literally delete the raw materials inside the furnace.
             job.markFailed();
         } else {
-            // RESET_PROGRESS — just reset cook time
+            // We are just going to reset the cooking progress back to 0%.
             job.markFailed();
         }
     }
 
+    /**
+     * The main loop that runs every tick.
+     * We use this to tick down the timers for all active jobs and see if anyone failed.
+     */
     private static void tick(MinecraftServer server) {
         if (ACTIVE_JOBS.isEmpty()) return;
 
@@ -332,31 +365,35 @@ public final class SupervisedJobManager {
             Map.Entry<String, SupervisedJob> entry = it.next();
             SupervisedJob job = entry.getValue();
 
-            // Check if furnace still exists
+            // First, make sure the furnace didn't literally get blown up by a creeper.
             ServerWorld world = server.getWorld(job.getDimension());
             if (world != null) {
                 BlockEntity be = world.getBlockEntity(job.getFurnacePos());
                 if (!(be instanceof AbstractFurnaceBlockEntity)) {
-                    // Furnace was broken or removed. Silently clean up the job.
+                    // Furnace is gone! Just silently forget the job.
                     PLAYER_TO_JOB.remove(job.getOwnerUuid());
                     it.remove();
                     continue;
                 }
             }
 
+            // Tick the timers!
             if (job.tick()) {
-                // Job expired — handle failure
+                // Returns true if the timer hit 0 and they failed.
                 ServerPlayerEntity player = server.getPlayerManager().getPlayer(job.getOwnerUuid());
                 handleJobFail(player, job);
                 PLAYER_TO_JOB.remove(job.getOwnerUuid());
                 it.remove();
 
-                // Clear the furnace input/output if FAIL behavior
+                // If the config says we should destroy the items on failure, do it now.
                 clearFurnaceOnFail(server, job);
             }
         }
     }
 
+    /**
+     * Empties out the furnace completely as punishment for walking away.
+     */
     private static void clearFurnaceOnFail(MinecraftServer server, SupervisedJob job) {
         if (!"FAIL".equalsIgnoreCase(job.getConfigLeaveBehaviour())) return;
 
@@ -365,9 +402,9 @@ public final class SupervisedJobManager {
 
         BlockEntity be = world.getBlockEntity(job.getFurnacePos());
         if (be instanceof AbstractFurnaceBlockEntity furnace) {
-            // Clear the input slot (index 0)
+            // Clear the raw material slot
             furnace.setStack(0, ItemStack.EMPTY);
-            // Clear the output slot (index 2)
+            // Clear the finished output slot
             furnace.setStack(2, ItemStack.EMPTY);
             furnace.markDirty();
         }

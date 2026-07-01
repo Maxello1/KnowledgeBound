@@ -25,6 +25,9 @@ public class ServerWorldMixin {
     private void knowledgebound$onSpawnEntity(Entity entity, CallbackInfoReturnable<Boolean> cir) {
         KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
 
+        // The config allows us to completely wipe out certain mobs from the world.
+        // If a specific mob type is set to be blocked, we simply say "nope" right as it tries to spawn,
+        // and cancel the entire spawning event.
         if (cfg.blockVillagerSpawns && entity instanceof VillagerEntity) {
             cir.setReturnValue(false);
             return;
@@ -50,7 +53,9 @@ public class ServerWorldMixin {
             return;
         }
 
-        // Copper golem check (safe for modded — uses registry ID string match)
+        // We also have a special check for copper golems.
+        // Since copper golems might come from different mods, we don't check the Java class instance.
+        // Instead, we just check if its registry ID string has "copper_golem" in it. Safe and easy!
         if (cfg.blockCopperGolemSpawns) {
             Identifier entityId = Registries.ENTITY_TYPE.getId(entity.getType());
             if (entityId.getPath().contains("copper_golem")) {
@@ -59,7 +64,8 @@ public class ServerWorldMixin {
             }
         }
 
-        // Generic blocklist from config
+        // Finally, if modpack makers want to block any other random entities, they can just 
+        // throw the registry ID into the "blockedMobSpawns" list in the config.
         if (!cfg.blockedMobSpawns.isEmpty()) {
             String entityIdStr = Registries.ENTITY_TYPE.getId(entity.getType()).toString();
             if (cfg.blockedMobSpawns.contains(entityIdStr)) {

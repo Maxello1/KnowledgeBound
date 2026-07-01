@@ -21,7 +21,9 @@ import java.util.List;
 
 /**
  * Creates a vanilla double-chest GUI that displays a player's knowledge progress.
- * Fully server-side — the vanilla client renders chest GUIs natively, no client mod needed.
+ * This is fully server-side! We don't need the client to download any custom GUI code,
+ * we just trick the vanilla client into thinking it's looking inside a large chest, 
+ * but we fill it with items that show stats when you hover over them.
  */
 public final class KnowledgeGuiHandler {
 
@@ -32,7 +34,7 @@ public final class KnowledgeGuiHandler {
 
     /**
      * Opens the knowledge GUI for the given player.
-     * Shows all 18 knowledges with tier, progress, and visual indicators.
+     * We create a fake 54-slot inventory (a double chest) and carefully place our "buttons" in it.
      */
     public static void open(ServerPlayerEntity player) {
         SimpleInventory inv = new SimpleInventory(54); // 6 rows = double chest

@@ -49,45 +49,52 @@ public abstract class SmithingScreenHandlerMixin extends ForgingScreenHandler {
 
         ItemStack result = this.output.getStack(0);
         KnowledgeBound.LOGGER.info("[KB DEBUG] updateResult: result={}", result.getItem().toString());
+        // If there's no result, there's nothing for us to gate.
         if (result.isEmpty()) return;
 
-        // Check if this is a trim/gem operation by comparing the result to the base input
-        ItemStack template = this.input.getStack(0);  // template/smithing template
-        ItemStack baseInput = this.input.getStack(1); // base item
-        ItemStack addition = this.input.getStack(2);  // material/gem
+        // Let's grab the actual ingredients the player put into the smithing table.
+        ItemStack template = this.input.getStack(0);  // The smithing template (like armor trim or netherite upgrade)
+        ItemStack baseInput = this.input.getStack(1); // The base piece of armor/tool
+        ItemStack addition = this.input.getStack(2);  // The material (like diamond, redstone, or a modded gem)
         KnowledgeBound.LOGGER.info("[KB DEBUG] baseInput={}, template={}, addition={}", baseInput.getItem().toString(), template.getItem().toString(), addition.getItem().toString());
 
-        // Only gate trim operations — skip netherite upgrades
-        // Netherite upgrades change the item type (iron → netherite), trims don't
+        // We only want to gate *trimming* operations, not straight-up upgrades.
+        // If you're upgrading an iron chestplate to netherite, the actual item type changes.
+        // If you're just adding a trim to it, the item stays the same. We use that to tell them apart!
         if (!result.getItem().equals(baseInput.getItem())) {
-            // Item type changed — this is a netherite upgrade, not a trim
+            // The item changed types, so this is an upgrade. We don't care about it here.
             KnowledgeBound.LOGGER.info("[KB DEBUG] Item type changed, skipping trim check.");
             return;
         }
 
-        // This is a trim/gem operation (item type didn't change)
-        // Count how many trims/gems are already on the BASE item
+        // Okay, so it IS a trim or a gem socket. 
+        // We need to count how many trims this item ALREADY has on it.
         int existingCount = getGemOrTrimCount(baseInput);
-        int newCount = existingCount + 1; // the result adds one more
+        int newCount = existingCount + 1; // Since they are applying one right now, we add 1.
         KnowledgeBound.LOGGER.info("[KB DEBUG] existingCount={}, newCount={}", existingCount, newCount);
 
-        // Check player tier
+        // Make sure we're dealing with a player on the server side.
         PlayerEntity player = this.player;
         KnowledgeBound.LOGGER.info("[KB DEBUG] player={}, isServerPlayer={}", player != null ? player.getName().getString() : "null", player instanceof ServerPlayerEntity);
         if (!(player instanceof ServerPlayerEntity serverPlayer)) return;
 
+        // Check their current Jeweller knowledge tier.
         int playerTier = PlayerKnowledgeManager.getTier(serverPlayer, KnowledgeRegistry.JEWELLER_ID);
+        // Find out what their max allowed trims is. If their tier is higher than the config array,
+        // we just cap it at a generous 3 as a fallback.
         int maxAllowed = playerTier < cfg.jewellerMaxGemsPerTier.length
                 ? cfg.jewellerMaxGemsPerTier[playerTier]
                 : 3;
         KnowledgeBound.LOGGER.info("[KB DEBUG] playerTier={}, maxAllowed={}", playerTier, maxAllowed);
 
+        // Are they trying to bite off more than they can chew?
         if (newCount > maxAllowed) {
             KnowledgeBound.LOGGER.info("[KB DEBUG] GATING: newCount {} > maxAllowed {}. Clearing slot.", newCount, maxAllowed);
-            // Player can't apply this many — clear the result
+            // Too many trims for their skill level! We straight up wipe the result slot.
+            // The vanilla game won't let them click on anything to craft it.
             this.output.setStack(0, ItemStack.EMPTY);
 
-            // Determine required tier for this count
+            // Let's figure out what tier they ACTUALLY need to do this, so we can tell them.
             int requiredTier = 0;
             for (int t = 0; t < cfg.jewellerMaxGemsPerTier.length; t++) {
                 if (cfg.jewellerMaxGemsPerTier[t] >= newCount) {
@@ -96,13 +103,16 @@ public abstract class SmithingScreenHandlerMixin extends ForgingScreenHandler {
                 }
             }
 
+            // Send a nice formatted message letting them know they need to study more.
             String msg = cfg.messages.jewellerSmithingTierLow
                     .replace("{minTier}", String.valueOf(requiredTier));
             serverPlayer.sendMessage(Text.literal(msg), true);
             return;
         }
 
-        // Allowed — tag the result with the updated gem/trim count for tracking
+        // They pass the test! We allow it.
+        // We just need to make sure we tag the newly crafted item with the updated trim count.
+        // That way, we can check it again if they decide to add another one later.
         NbtCompound nbt = new NbtCompound();
         NbtComponent existing = result.get(DataComponentTypes.CUSTOM_DATA);
         if (existing != null) {
@@ -111,7 +121,7 @@ public abstract class SmithingScreenHandlerMixin extends ForgingScreenHandler {
         nbt.putInt("knowledgebound_gem_count", newCount);
         result.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(nbt));
 
-        // XP is granted when the player takes the result (handled by the take listener below)
+        // Note: We don't give them XP here yet. We give it when they actually take the item out!
     }
 
     /**

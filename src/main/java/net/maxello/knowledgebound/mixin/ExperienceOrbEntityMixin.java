@@ -9,17 +9,25 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Our mod completely replaces the vanilla XP system. You don't learn things by absorbing 
+ * glowing green orbs from dead pigs anymore. You learn by actually doing things!
+ * So, we need to make sure players can't pick up these old XP orbs.
+ */
 @Mixin(ExperienceOrbEntity.class)
 public abstract class ExperienceOrbEntityMixin {
 
     /**
-     * Prevent XP orbs from giving XP. We discard the orb immediately so vanilla
-     * pickup logic doesn't award experience — KnowledgeBound tracks/awards XP
-     * through its own systems.
+     * We inject into the exact moment the player touches the orb.
+     * Before vanilla can play the little ding sound and increase their XP bar,
+     * we aggressively step in and say "Nope, this orb doesn't exist anymore."
      */
     @Inject(method = "onPlayerCollision", at = @At("HEAD"), cancellable = true)
     private void knowledgebound$noXpPickup(PlayerEntity player, CallbackInfo ci) {
-        ((ExperienceOrbEntity)(Object)this).discard(); // remove orb
+        // Just delete the orb entirely. Poof. Gone. 
+        ((ExperienceOrbEntity)(Object)this).discard(); 
+        
+        // Cancel the collision event so vanilla doesn't even know it happened.
         ci.cancel();
     }
 }

@@ -15,6 +15,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+// This is the mother of all config files for KnowledgeBound.
+// It uses Gson to serialize and deserialize a massive JSON file where server admins can tweak basically everything.
+// We use a singleton pattern (INSTANCE) so the rest of the mod can easily grab values from here without passing instances around.
 public class KnowledgeBoundConfig {
 
     // Pretty JSON, but without HTML escaping so we don't get \u003d etc.

@@ -19,8 +19,19 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * The heart of the player's progression system.
+ * 
+ * This manager keeps track of what tier a player is at for every single knowledge,
+ * how many "minutes" (XP) they have towards the next tier, and when they last gained XP.
+ * It also handles the logic for actually leveling up, saving/loading to NBT, and
+ * updating the vanilla XP bar to visually represent the player's progress.
+ */
 public class PlayerKnowledgeManager {
 
+    /**
+     * A simple struct to hold the current state of a single knowledge for a player.
+     */
     public static class PlayerKnowledgeState {
         public int tier;
         public int currentMinutes;
@@ -33,16 +44,21 @@ public class PlayerKnowledgeManager {
         }
     }
 
-    // In-memory storage: per-player, per-knowledge state
+    // In-memory storage: per-player, per-knowledge state.
+    // We key this by UUID so we don't leak player objects, and then by the knowledge ID.
     private static final Map<UUID, Map<Identifier, PlayerKnowledgeState>> PLAYER_DATA = new HashMap<>();
 
-    // NBT key under which we store our data on the player
+    // The key we use when reading/writing our big block of data to the player's vanilla NBT.
     private static final String NBT_KEY = "knowledgebound_knowledge";
 
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] PlayerKnowledgeManager initialized.");
     }
 
+    /**
+     * Grabs the player's knowledge map. If they don't have one (like they just joined
+     * for the first time), we create a fresh one for them.
+     */
     private static Map<Identifier, PlayerKnowledgeState> getOrCreatePlayerMap(ServerPlayerEntity player) {
         return PLAYER_DATA.computeIfAbsent(player.getUuid(), uuid -> new HashMap<>());
     }
@@ -53,15 +69,21 @@ public class PlayerKnowledgeManager {
     }
 
     /**
-     * Grants 1 "minute" of XP if at least one real-time minute has passed
-     * since the last gain for this knowledge.
-     * Also updates the XP bar to show this knowledge's progress.
+     * Here's the core rate-limiting logic. 
+     * We don't want players spam-clicking blocks to level up instantly.
+     * We only grant 1 "minute" (1 XP point) if an actual real-world minute has 
+     * elapsed since the last time they gained XP for this specific knowledge.
+     * 
+     * If they get the point, we check if they leveled up and update their displays.
      */
     public static void grantMinuteIfAllowed(ServerPlayerEntity player, Identifier knowledgeId) {
         KnowledgeDefinition def = KnowledgeRegistry.get(knowledgeId);
         if (def == null) return;
 
         PlayerKnowledgeState state = getState(player, knowledgeId);
+        
+        // This is a rough-and-ready way to divide current time into 1-minute "buckets".
+        // As long as the bucket index is higher than the last one we recorded, they can get XP.
         long currentMinute = System.currentTimeMillis() / 60000L;
 
         // Only one XP tick per real-time minute per knowledge
@@ -75,6 +97,9 @@ public class PlayerKnowledgeManager {
                     : 0;
 
             if (neededForNext > 0) {
+                // We show an action bar message so the player knows they're making progress.
+                // However, crafting knowledges are extremely spammy since people craft a lot of items,
+                // so we mute the action bar popups for those specific ones.
                 boolean isCraftingKnowledge =
                         knowledgeId.equals(KnowledgeRegistry.TOOLSMITHING_ID) ||
                                 knowledgeId.equals(KnowledgeRegistry.WEAPONSMITHING_ID) ||
@@ -83,18 +108,21 @@ public class PlayerKnowledgeManager {
                 if (!isCraftingKnowledge) {
                     player.sendMessage(
                             KnowledgeBoundTextFormatter.learningTick(knowledgeId),
-                            true // action bar
+                            true // Send it to the action bar instead of chat
                     );
                 }
             }
 
-            // Only try to level up if we actually gained XP
+            // Since we added a point, let's see if that pushed them over the edge to the next tier!
             tryLevelUp(player, knowledgeId, def, state);
+            
+            // Sync up the new state to the client side and the scoreboard HUD.
             sendFullSync(player);
             KnowledgeScoreboardHud.updateScoreboard(player);
         }
 
-        // ALWAYS: XP bar should reflect this knowledge's current state
+        // We do this EVERY time, even if they didn't gain a minute, just to ensure
+        // the vanilla XP bar is actively showing the progress of whatever skill they are currently using.
         updateXpBarForKnowledge(player, knowledgeId, def, state);
     }
 
@@ -121,6 +149,7 @@ public class PlayerKnowledgeManager {
                                    KnowledgeDefinition def,
                                    PlayerKnowledgeState state) {
         int currentTier = state.tier;
+        // If they're already at the absolute max tier, there's nowhere to go.
         if (currentTier >= def.getMaxTier()) {
             return;
         }
@@ -130,9 +159,12 @@ public class PlayerKnowledgeManager {
         if (needed <= 0) return;
 
         if (state.currentMinutes >= needed) {
-            // check proficiency limits before leveling up
+            // Before we officially bump their tier, we have to enforce the mod's "proficiency limits".
+            // For example, the config might say a player can only master ONE material job.
+            // If they try to level up a second one to max, we stop them here.
             if (!canReachTier(player, knowledgeId, def, nextTier)) {
-                // cap the minutes so they don't keep accumulating past the needed
+                // They've hit the cap. We cap their minutes so it doesn't keep climbing infinitely
+                // while they are stuck at the threshold.
                 state.currentMinutes = needed;
                 player.sendMessage(
                         KnowledgeBoundTextFormatter.proficiencyLimitReached(knowledgeId),
@@ -141,12 +173,13 @@ public class PlayerKnowledgeManager {
                 return;
             }
 
+            // They are allowed to level up! Subtract the cost and bump the tier.
             state.currentMinutes -= needed;
             state.tier = nextTier;
 
             player.sendMessage(
                     KnowledgeBoundTextFormatter.levelUp(knowledgeId, nextTier),
-                    true // action bar
+                    true // send to action bar
             );
         }
     }

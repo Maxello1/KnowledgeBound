@@ -23,6 +23,8 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
         super(world, pos, yaw, profile);
     }
 
+    // When the server saves a player to disk (like when they log out or the server autosaves),
+    // we want to make sure all their hard-earned knowledge progress is saved into their NBT data too.
     @Inject(method = "writeCustomDataToNbt", at = @At("TAIL"))
     @SuppressWarnings("unused")
     private void knowledgebound$writeKnowledge(NbtCompound nbt, CallbackInfo ci) {
@@ -30,6 +32,8 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
         PlayerKnowledgeManager.writeToNbt(self, nbt);
     }
 
+    // Conversely, when the player logs back in, we intercept the NBT reading process
+    // so we can load all their knowledge levels back into memory from the saved file.
     @Inject(method = "readCustomDataFromNbt", at = @At("TAIL"))
     @SuppressWarnings("unused")
     private void knowledgebound$readKnowledge(NbtCompound nbt, CallbackInfo ci) {

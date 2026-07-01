@@ -6,8 +6,9 @@ import java.util.Map;
 
 /**
  * Client-side mirror of the player's knowledge state.
- * Populated by KnowledgeSyncPayload packets from the server.
- * Each entry: [tier, currentMinutes, neededMinutes, maxTier]
+ * Because the actual XP data lives on the server, we need this class to cache the data 
+ * when the server sends us an update via KnowledgeSyncPayload packets.
+ * Each entry holds: [tier, currentMinutes, neededMinutes, maxTier]
  */
 public final class ClientKnowledgeState {
 
