@@ -1,6 +1,6 @@
 {
   "id": "knowledgebound:small_crown",
-  "vanillaItem": "minecraft:carved_pumpkin",
+  "vanillaItem": "minecraft:netherite_helmet",
   "itemResource": {
     "models": {
       "default": "knowledgebound:item/smallcrownv1"
