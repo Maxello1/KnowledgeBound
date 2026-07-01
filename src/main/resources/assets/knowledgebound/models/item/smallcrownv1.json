@@ -3,6 +3,7 @@
 	"credit": "Made with Blockbench",
 	"textures": {
 		"0": "knowledgebound:item/smallcrownv1",
+		"2": "knowledgebound:item/smallcrownv1",
 		"particle": "knowledgebound:item/smallcrownv1"
 	},
 	"elements": [
