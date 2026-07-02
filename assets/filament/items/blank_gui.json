@@ -1,7 +1,0 @@
-{
-  "model": {
-    "type": "model",
-    "model": "filament:item/blank_gui"
-  },
-  "oversized_in_gui": true
-}
