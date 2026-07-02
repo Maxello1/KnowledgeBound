@@ -29,9 +29,7 @@
 		"fabricloader": ">=0.16.9",
 		"minecraft": "~1.21.1",
 		"java": ">=21",
-		"fabric-api": "*",
-		"polymer-core": "*",
-		"filament": "*"
+		"fabric-api": "*"
 	},
 	"suggests": {
 		"another-mod": "*"

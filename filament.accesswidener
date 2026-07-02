@@ -1,0 +1,8 @@
+accessWidener	v2	intermediary
+accessible	class	net/minecraft/class_7655$class_9158
+accessible	class	net/minecraft/class_4466$class_4474
+accessible	class	net/minecraft/class_3222$class_9773
+accessible	field	net/minecraft/class_3258	field_45038	Lnet/minecraft/class_3258$class_8616;
+accessible	method	net/minecraft/class_3258	method_52422	(Ljava/lang/String;)Ljava/lang/String;
+accessible	method	net/minecraft/class_3258$class_8616	method_52426	()Ljava/util/zip/ZipFile;
+accessible	class	net/minecraft/class_2586$class_9473

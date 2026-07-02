@@ -36,9 +36,7 @@ public class KnowledgeBound implements ModInitializer {
         // If we don't register this, the server won't be able to send knowledge updates to the client.
         PayloadTypeRegistry.playS2C().register(KnowledgeSyncPayload.ID, KnowledgeSyncPayload.CODEC);
 
-        // Tell Polymer to include our mod's custom assets (like the Small Crown model) in its auto-generated resource pack!
-        // Without this, the client never downloads the 3D models and falls back to vanilla items.
-        eu.pb4.polymer.resourcepack.api.PolymerResourcePackUtils.addModAssets(MOD_ID);
+
 
         // It's super important we load the config first!
         // A lot of the registries below rely on config values (like whether certain features are enabled),
