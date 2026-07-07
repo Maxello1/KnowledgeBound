@@ -205,10 +205,10 @@ public class KnowledgeBoundConfig {
             "",
             "Array entries (6 levels of difficulty):",
             "  [0] = diff <= -3  (way out of your league — guaranteed fail)",
-            "  [1] = diff  = -2  (very risky — 90% fail)",
-            "  [2] = diff  = -1  (challenging — 75% fail)",
-            "  [3] = diff  =  0  (at your level — 50% fail)",
-            "  [4] = diff  = +1  (below your skill — 20% fail)",
+            "  [1] = diff  = -2  (very risky — 85% fail)",
+            "  [2] = diff  = -1  (challenging — 45% fail)",
+            "  [3] = diff  =  0  (at your level — 10% fail)",
+            "  [4] = diff  = +1  (below your skill — 0% fail)",
             "  [5] = diff >= +2  (trivial — always perfect)",
             "",
             "Each entry has three chances that must add up to 1.0 (auto-normalized):",
@@ -271,10 +271,10 @@ public class KnowledgeBoundConfig {
     private static CraftingTierChances[] defaultCraftingDiffChances() {
         return new CraftingTierChances[] {
                 new CraftingTierChances(1.00, 0.00, 0.00), // diff <= -3: impossible
-                new CraftingTierChances(0.90, 0.08, 0.02), // diff  = -2: very risky
-                new CraftingTierChances(0.75, 0.20, 0.05), // diff  = -1: challenging
-                new CraftingTierChances(0.50, 0.40, 0.10), // diff  =  0: at your level
-                new CraftingTierChances(0.20, 0.30, 0.50), // diff  = +1: below your skill
+                new CraftingTierChances(0.85, 0.12, 0.03), // diff  = -2: very risky
+                new CraftingTierChances(0.45, 0.35, 0.20), // diff  = -1: challenging
+                new CraftingTierChances(0.10, 0.15, 0.75), // diff  =  0: at your level
+                new CraftingTierChances(0.00, 0.08, 0.92), // diff  = +1: below your skill
                 new CraftingTierChances(0.00, 0.00, 1.00)  // diff >= +2: trivial
         };
     }
@@ -623,7 +623,7 @@ public class KnowledgeBoundConfig {
     // --- Riding ---
     public boolean husbandryRidingEnabled = true;
     public boolean husbandryRidingUnreliableBelowTier = true;
-    public double husbandryRidingKickOffChance = 0.15;
+    public double husbandryRidingKickOffChance = 0.25;
     public int husbandryRidingCheckIntervalTicks = 100;
 
     // --- Egg chicken spawn ---
@@ -943,7 +943,7 @@ public class KnowledgeBoundConfig {
             "Smelting is a 3-tier supervised job for metallurgy furnace/blast furnace recipes.",
             "Players must keep the furnace UI open while smelting. Only one tracked item at a time.",
             "",
-            "smeltingGraceTimeTicks: Ticks before an unattended job fails (100 = 5 seconds).",
+            "smeltingGraceTimeTicks: Ticks before an unattended job fails (600 = 30 seconds).",
             "smeltingCollectionWindowTicks: Ticks to collect the result after smelting finishes.",
             "smeltingLeaveBehaviour: What happens when the grace expires: FAIL or RESET_PROGRESS.",
             "",
@@ -957,9 +957,9 @@ public class KnowledgeBoundConfig {
     /** Base minutes for smelting tiers 1, 2, 3 (before multiplier). */
     public int[] smeltingBaseMinutes = new int[] { 60, 120, 240 };
     /** Grace period ticks when the player closes the furnace UI. */
-    public int smeltingGraceTimeTicks = 100;
+    public int smeltingGraceTimeTicks = 600;
     /** Collection window ticks after smelting completes. */
-    public int smeltingCollectionWindowTicks = 100;
+    public int smeltingCollectionWindowTicks = 1200;
     /** Behavior on grace expiry: "FAIL" or "RESET_PROGRESS". */
     public String smeltingLeaveBehaviour = "FAIL";
     /** Fail chances per smelting tier (0-2). */
@@ -995,13 +995,13 @@ public class KnowledgeBoundConfig {
     /** Whether cooking supervision is enabled. */
     public boolean cookingEnabled = true;
     /** Grace period ticks when the player closes the furnace/smoker UI. */
-    public int cookingGraceTimeTicks = 100;
+    public int cookingGraceTimeTicks = 400;
     /** Collection window ticks after cooking completes. */
-    public int cookingCollectionWindowTicks = 100;
+    public int cookingCollectionWindowTicks = 600;
     /** Behavior on grace expiry: "FAIL" or "RESET_PROGRESS". */
     public String cookingLeaveBehaviour = "FAIL";
     /** Whether campfire cooking requires supervision. */
-    public boolean cookingAppliesToCampfire = false;
+    public boolean cookingAppliesToCampfire = true;
     /** Fail chances per cooking tier (0-2). */
     public GatherFailConfig cookingFailChances = new GatherFailConfig(0.40, 0.25, 0.10, 0.0, 0.0);
     /** Item IDs that require cooking supervision (food inputs). */
@@ -1125,6 +1125,7 @@ public class KnowledgeBoundConfig {
                 KnowledgeBound.LOGGER.info("[KnowledgeBound] Loaded config from {}", path);
                 // Fill in any missing fields from new versions and re-save
                 INSTANCE.fillDefaults();
+                INSTANCE.validate();
                 INSTANCE.save();
             } catch (IOException e) {
                 KnowledgeBound.LOGGER.error("[KnowledgeBound] Failed to load config, using defaults.", e);
@@ -1232,6 +1233,74 @@ public class KnowledgeBoundConfig {
             slaughteringBaseMinutes = defaults.slaughteringBaseMinutes;
     }
 
+    /**
+     * Clamp all config values to sane ranges so server admins can't accidentally
+     * break everything with a typo. Called after loading from disk and after
+     * /kb config set writes a new value.
+     */
+    public void validate() {
+        // --- Chance values: must be 0.0–1.0 ---
+        clampGatherFail(forestryGatherFail);
+        clampGatherFail(miningGatherFail);
+        clampGatherFail(diggingGatherFail);
+        clampGatherFail(farmingGatherFail);
+        clampGatherFail(beekeepingHarvestFail);
+        clampGatherFail(smeltingFailChances);
+        clampGatherFail(cookingFailChances);
+        clampGatherFail(husbandryBreedingFail);
+        clampGatherFail(husbandryTamingFail);
+        clampGatherFail(husbandryMilkingFail);
+        clampGatherFail(husbandryShearingFail);
+
+        if (betterHoneyChance != null) {
+            for (int i = 0; i < betterHoneyChance.length; i++)
+                betterHoneyChance[i] = clamp01(betterHoneyChance[i]);
+        }
+        if (slaughteringFailChancePerTier != null) {
+            for (int i = 0; i < slaughteringFailChancePerTier.length; i++)
+                slaughteringFailChancePerTier[i] = clamp01(slaughteringFailChancePerTier[i]);
+        }
+
+        poorDurabilityFraction = clamp01(poorDurabilityFraction);
+        husbandryRidingKickOffChance = clamp01(husbandryRidingKickOffChance);
+        stonecutterCutChanceTier1 = clamp01(stonecutterCutChanceTier1);
+        stonecutterCutReductionPerTier = clamp01(stonecutterCutReductionPerTier);
+
+        // --- Tick values: must be >= 1 ---
+        smeltingGraceTimeTicks = Math.max(1, smeltingGraceTimeTicks);
+        smeltingCollectionWindowTicks = Math.max(1, smeltingCollectionWindowTicks);
+        cookingGraceTimeTicks = Math.max(1, cookingGraceTimeTicks);
+        cookingCollectionWindowTicks = Math.max(1, cookingCollectionWindowTicks);
+        husbandryRidingCheckIntervalTicks = Math.max(1, husbandryRidingCheckIntervalTicks);
+
+        // --- Crafting diff chances: must have exactly 6 entries, each normalized ---
+        if (craftingDiffChances == null || craftingDiffChances.length != 6) {
+            craftingDiffChances = defaultCraftingDiffChances();
+        }
+        for (CraftingTierChances ctc : craftingDiffChances) {
+            ctc.normalize();
+        }
+
+        // --- Leave behaviour: must be FAIL or RESET_PROGRESS ---
+        if (!"FAIL".equals(smeltingLeaveBehaviour) && !"RESET_PROGRESS".equals(smeltingLeaveBehaviour))
+            smeltingLeaveBehaviour = "FAIL";
+        if (!"FAIL".equals(cookingLeaveBehaviour) && !"RESET_PROGRESS".equals(cookingLeaveBehaviour))
+            cookingLeaveBehaviour = "FAIL";
+    }
+
+    private static double clamp01(double v) {
+        return Math.max(0.0, Math.min(1.0, v));
+    }
+
+    private static void clampGatherFail(GatherFailConfig gf) {
+        if (gf == null) return;
+        gf.tier0 = clamp01(gf.tier0);
+        gf.tier1 = clamp01(gf.tier1);
+        gf.tier2 = clamp01(gf.tier2);
+        gf.tier3 = clamp01(gf.tier3);
+        gf.tier4 = clamp01(gf.tier4);
+    }
+
     public void save() {
         Path configDir = FabricLoader.getInstance().getConfigDir();
         Path path = configDir.resolve("knowledgebound.json");
@@ -1292,6 +1361,7 @@ public class KnowledgeBoundConfig {
                 Object parsed = GSON.fromJson(value, field.getGenericType());
                 field.set(current, parsed);
             }
+            validate();
             return true;
         } catch (Exception e) {
             return false;

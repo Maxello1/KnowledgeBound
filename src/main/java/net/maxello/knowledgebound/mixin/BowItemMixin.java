@@ -95,7 +95,7 @@ public class BowItemMixin {
         knowledgebound$currentPlayer.remove();
         knowledgebound$lastOutcome.remove();
 
-        KnowledgeBound.LOGGER.info("[KB DEBUG] Bow fired! Penalty added: {}", penalty);
+        KnowledgeBound.LOGGER.debug("Bow fired! Penalty added: {}", penalty);
 
         // Add our penalty on top of whatever the vanilla divergence was going to be.
         return originalDivergence + penalty;

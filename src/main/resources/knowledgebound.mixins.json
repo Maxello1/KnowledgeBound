@@ -29,7 +29,8 @@
         "ShearingMixin",
         "SmithingScreenHandlerMixin",
         "PlayerAttackCritMixin",
-        "LivingEntityMixin"
+        "LivingEntityMixin",
+        "BlockPlaceMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

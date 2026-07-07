@@ -104,7 +104,7 @@ public abstract class AbstractFurnaceBlockEntityMixin {
         KnowledgeBoundConfig cfg = KnowledgeBoundConfig.INSTANCE;
         if (jobType == SupervisedJob.JobType.SMELTING && !cfg.smeltingEnabled) return;
         if (jobType == SupervisedJob.JobType.COOKING && !cfg.cookingEnabled) {
-            KnowledgeBound.LOGGER.info("[KB-DEBUG] Cooking disabled in config, skipping supervision for {}", inputId);
+            KnowledgeBound.LOGGER.debug("Cooking disabled in config, skipping supervision for {}", inputId);
             return;
         }
 
@@ -114,14 +114,14 @@ public abstract class AbstractFurnaceBlockEntityMixin {
 
         if (viewer != null) {
             // We found someone! Let's try to start a new supervised job for them.
-            KnowledgeBound.LOGGER.info("[KB-DEBUG] Starting {} job for {} at {} (item: {})",
+            KnowledgeBound.LOGGER.debug("Starting {} job for {} at {} (item: {})",
                     jobType, viewer.getName().getString(), pos, inputId);
             SupervisedJob job = SupervisedJobManager.startJob(viewer, serverWorld, pos, jobType, inputId);
             if (job == null) {
                 // Uh oh, we couldn't start the job. This usually means their tier isn't high enough yet,
                 // or maybe a weird edge case where a job already existed in memory. Either way, we freeze the furnace 
                 // so they don't get free items they haven't earned yet.
-                KnowledgeBound.LOGGER.info("[KB-DEBUG] Failed to start {} job at {} — blocking cookTime", jobType, pos);
+                KnowledgeBound.LOGGER.debug("Failed to start {} job at {} — blocking cookTime", jobType, pos);
                 accessor.cookTime = 0;
             }
             // If it did start successfully, we just let the furnace keep ticking normally, nothing else to do.

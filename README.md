@@ -232,8 +232,8 @@ When harvesting with a glass bottle, there is a chance to receive **"Royal Honey
 
 | Tier | Better Honey Chance |
 |:---|:---:|
-| Tier 1 | 10% |
-| Tier 2 | 25% |
+| Tier 1 | 0% |
+| Tier 2 | 10% |
 | Tier 3 | 25% |
 
 **Default Royal Honey effects:**

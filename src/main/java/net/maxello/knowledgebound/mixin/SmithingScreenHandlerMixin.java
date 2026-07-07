@@ -48,7 +48,7 @@ public abstract class SmithingScreenHandlerMixin extends ForgingScreenHandler {
         if (!cfg.jewellerEnabled || !cfg.jewellerSmithingEnabled) return;
 
         ItemStack result = this.output.getStack(0);
-        KnowledgeBound.LOGGER.info("[KB DEBUG] updateResult: result={}", result.getItem().toString());
+        KnowledgeBound.LOGGER.debug("Smithing updateResult: result={}", result.getItem().toString());
         // If there's no result, there's nothing for us to gate.
         if (result.isEmpty()) return;
 
@@ -56,14 +56,14 @@ public abstract class SmithingScreenHandlerMixin extends ForgingScreenHandler {
         ItemStack template = this.input.getStack(0);  // The smithing template (like armor trim or netherite upgrade)
         ItemStack baseInput = this.input.getStack(1); // The base piece of armor/tool
         ItemStack addition = this.input.getStack(2);  // The material (like diamond, redstone, or a modded gem)
-        KnowledgeBound.LOGGER.info("[KB DEBUG] baseInput={}, template={}, addition={}", baseInput.getItem().toString(), template.getItem().toString(), addition.getItem().toString());
+        KnowledgeBound.LOGGER.debug("Smithing baseInput={}, template={}, addition={}", baseInput.getItem().toString(), template.getItem().toString(), addition.getItem().toString());
 
         // We only want to gate *trimming* operations, not straight-up upgrades.
         // If you're upgrading an iron chestplate to netherite, the actual item type changes.
         // If you're just adding a trim to it, the item stays the same. We use that to tell them apart!
         if (!result.getItem().equals(baseInput.getItem())) {
             // The item changed types, so this is an upgrade. We don't care about it here.
-            KnowledgeBound.LOGGER.info("[KB DEBUG] Item type changed, skipping trim check.");
+            KnowledgeBound.LOGGER.debug("Smithing item type changed, skipping trim check.");
             return;
         }
 
@@ -71,11 +71,11 @@ public abstract class SmithingScreenHandlerMixin extends ForgingScreenHandler {
         // We need to count how many trims this item ALREADY has on it.
         int existingCount = getGemOrTrimCount(baseInput);
         int newCount = existingCount + 1; // Since they are applying one right now, we add 1.
-        KnowledgeBound.LOGGER.info("[KB DEBUG] existingCount={}, newCount={}", existingCount, newCount);
+        KnowledgeBound.LOGGER.debug("Smithing existingCount={}, newCount={}", existingCount, newCount);
 
         // Make sure we're dealing with a player on the server side.
         PlayerEntity player = this.player;
-        KnowledgeBound.LOGGER.info("[KB DEBUG] player={}, isServerPlayer={}", player != null ? player.getName().getString() : "null", player instanceof ServerPlayerEntity);
+        KnowledgeBound.LOGGER.debug("Smithing player={}, isServerPlayer={}", player != null ? player.getName().getString() : "null", player instanceof ServerPlayerEntity);
         if (!(player instanceof ServerPlayerEntity serverPlayer)) return;
 
         // Check their current Jeweller knowledge tier.
@@ -85,11 +85,11 @@ public abstract class SmithingScreenHandlerMixin extends ForgingScreenHandler {
         int maxAllowed = playerTier < cfg.jewellerMaxGemsPerTier.length
                 ? cfg.jewellerMaxGemsPerTier[playerTier]
                 : 3;
-        KnowledgeBound.LOGGER.info("[KB DEBUG] playerTier={}, maxAllowed={}", playerTier, maxAllowed);
+        KnowledgeBound.LOGGER.debug("Smithing playerTier={}, maxAllowed={}", playerTier, maxAllowed);
 
         // Are they trying to bite off more than they can chew?
         if (newCount > maxAllowed) {
-            KnowledgeBound.LOGGER.info("[KB DEBUG] GATING: newCount {} > maxAllowed {}. Clearing slot.", newCount, maxAllowed);
+            KnowledgeBound.LOGGER.debug("Smithing GATING: newCount {} > maxAllowed {}. Clearing slot.", newCount, maxAllowed);
             // Too many trims for their skill level! We straight up wipe the result slot.
             // The vanilla game won't let them click on anything to craft it.
             this.output.setStack(0, ItemStack.EMPTY);

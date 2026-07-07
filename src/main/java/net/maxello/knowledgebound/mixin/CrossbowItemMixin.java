@@ -97,7 +97,7 @@ public abstract class CrossbowItemMixin {
         knowledgebound$currentPlayer.remove();
         knowledgebound$lastOutcome.remove();
 
-        net.maxello.knowledgebound.KnowledgeBound.LOGGER.info("[KB DEBUG] Crossbow fired! Penalty added: {}", penalty);
+        net.maxello.knowledgebound.KnowledgeBound.LOGGER.debug("Crossbow fired! Penalty added: {}", penalty);
 
         // Slap the extra divergence on top of the vanilla base.
         return originalDivergence + penalty;

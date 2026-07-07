@@ -437,7 +437,12 @@ public class PlayerKnowledgeManager {
             data.put(id.toString(), new int[]{state.tier, state.currentMinutes, needed, maxTier});
         }
 
-        ServerPlayNetworking.send(player, new KnowledgeSyncPayload(data));
+        // Only send the HUD sync if the client actually has KnowledgeBound installed.
+        // Vanilla clients or clients without the mod won't have registered this payload,
+        // and sending it would cause issues.
+        if (ServerPlayNetworking.canSend(player, KnowledgeSyncPayload.ID)) {
+            ServerPlayNetworking.send(player, new KnowledgeSyncPayload(data));
+        }
     }
 }
 
