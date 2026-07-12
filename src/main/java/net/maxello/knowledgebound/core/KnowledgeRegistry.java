@@ -75,6 +75,14 @@ public class KnowledgeRegistry {
     public static final Identifier SLAUGHTERING_ID =
             Identifier.of(KnowledgeBound.MOD_ID, "slaughtering");
 
+    // alcohol (3-tier)
+    public static final Identifier ALCOHOL_ID =
+            Identifier.of(KnowledgeBound.MOD_ID, "alcohol");
+
+    // tea brewing (3-tier)
+    public static final Identifier TEA_BREWING_ID =
+            Identifier.of(KnowledgeBound.MOD_ID, "tea_brewing");
+
     public static void init() {
         KnowledgeBound.LOGGER.info("[KnowledgeBound] Registering knowledges…");
 
@@ -114,6 +122,10 @@ public class KnowledgeRegistry {
 
         // slaughtering (better drops and dissecting)
         register(createSlaughteringDefinition());
+
+        // alcohol and tea brewing
+        register(createAlcoholDefinition());
+        register(createTeaBrewingDefinition());
     }
 
     private static void register(KnowledgeDefinition def) {
@@ -530,6 +542,38 @@ public class KnowledgeRegistry {
                 KnowledgeDefinition.JobCategory.CLASS_3_TIER,
                 3,
                 minutesPerTier,
+                noToolTiers(),
+                List.of()
+        );
+    }
+
+    // --------------------------------------------------
+    //  Alcohol (class job, 3 tiers)
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createAlcoholDefinition() {
+        return new KnowledgeDefinition(
+                ALCOHOL_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.CLASS_3_TIER,
+                3,
+                classJobMinutesPerTier(),
+                noToolTiers(),
+                List.of()
+        );
+    }
+
+    // --------------------------------------------------
+    //  Tea Brewing (class job, 3 tiers)
+    // --------------------------------------------------
+
+    private static KnowledgeDefinition createTeaBrewingDefinition() {
+        return new KnowledgeDefinition(
+                TEA_BREWING_ID,
+                KnowledgeDefinition.Type.SKILL,
+                KnowledgeDefinition.JobCategory.CLASS_3_TIER,
+                3,
+                classJobMinutesPerTier(),
                 noToolTiers(),
                 List.of()
         );
