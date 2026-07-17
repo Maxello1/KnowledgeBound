@@ -592,7 +592,7 @@ The `armorTiers` section lets you customize which combat tier is needed to equip
 
 ## 📣 Commands
 
-All commands use the `/kb` prefix. Legacy alias `/checkxp` is also available for self-check. All `<knowledge>` arguments support tab auto-completion.
+Most commands use the `/kb` prefix. Legacy alias `/checkxp` is available for self-check, and `/reward` is a standalone player-transfer command. All `<knowledge>` arguments support tab auto-completion.
 
 ### Player Commands (Everyone)
 
@@ -604,6 +604,14 @@ All commands use the `/kb` prefix. Legacy alias `/checkxp` is also available for
 | `/kb hud` | Toggle the knowledge sidebar HUD on/off |
 | `/kb gui` | Open the knowledge progress chest GUI |
 | `/kb list` | List all registered knowledge types and their max tiers |
+
+### Reward Command (Permission-Gated)
+
+| Command | Description |
+|:---|:---|
+| `/reward <player> <knowledge> <amount>` | Transfer 1-5 of your current XP minutes for a knowledge to another online player |
+
+The sender must have at least the requested number of unspent progress minutes. Completed tiers cannot be transferred. The command requires `knowledgebound.command.reward`; without a compatible permissions plugin, it falls back to vanilla OP level 2.
 
 ### Admin Commands (OP Level 2+)
 
@@ -632,6 +640,7 @@ KnowledgeBound fully integrates with the **Fabric Permissions API** (`me.lucko.f
 | `knowledgebound.command.check` | `2` | Access to `/kb check <player>` |
 | `knowledgebound.command.set` | `2` | Access to `/kb set ...` |
 | `knowledgebound.command.grant` | `2` | Access to `/kb grant ...` |
+| `knowledgebound.command.reward` | `2` | Access to `/reward ...` |
 | `knowledgebound.command.give` | `2` | Access to `/kb give ...` |
 | `knowledgebound.command.reset` | `2` | Access to `/kb reset ...` |
 | `knowledgebound.command.reload` | `2` | Access to `/kb reload` |
@@ -715,6 +724,7 @@ The mod registers custom item tags under `data/knowledgebound/tags/item/` for to
 
 - **Maxello** — Lead developer. Core mod architecture, all game mechanics (gathering, crafting, combat, armor restrictions), job category system (Material/Class/Gathering/Combat), Carpentry, Masonry, Beekeeping, Stonecutter, proficiency limits, boat blocking, configuration system, admin commands.
 - **nipatiitti** — Client-side Knowledge HUD overlay, server→client state synchronization (`KnowledgeSyncPayload`), item tag system for tool tier detection (`KnowledgeTags`), unit tests (`CraftingTierChancesTest`, `GatherFailConfigTest`), code cleanup and import reorganization.
+- **Infinity90Cloud** — Contributor of the `/reward` player-to-player knowledge XP transfer command concept.
 - **Project Teapot Staff** — Bringing in Ideas for all features, bug testing all features and balancing.
 
 ---

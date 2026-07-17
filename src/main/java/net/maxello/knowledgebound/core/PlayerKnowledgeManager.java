@@ -44,6 +44,14 @@ public class PlayerKnowledgeManager {
         }
     }
 
+    public enum TransferResult {
+        SUCCESS,
+        SAME_PLAYER,
+        INSUFFICIENT_MINUTES,
+        RECIPIENT_CANNOT_RECEIVE,
+        INVALID_REQUEST
+    }
+
     // In-memory storage: per-player, per-knowledge state.
     // We key this by UUID so we don't leak player objects, and then by the knowledge ID.
     private static final Map<UUID, Map<Identifier, PlayerKnowledgeState>> PLAYER_DATA = new HashMap<>();
@@ -141,6 +149,92 @@ public class PlayerKnowledgeManager {
         sendFullSync(player);
         KnowledgeScoreboardHud.updateScoreboard(player);
         updateXpBarForKnowledge(player, knowledgeId, def, state);
+    }
+
+    /**
+     * Atomically transfers current progress minutes from one online player to another.
+     * Already-spent minutes represented by completed tiers cannot be transferred.
+     */
+    public static TransferResult transferMinutes(ServerPlayerEntity sender,
+                                                 ServerPlayerEntity recipient,
+                                                 Identifier knowledgeId,
+                                                 int amount) {
+        if (amount <= 0) {
+            return TransferResult.INVALID_REQUEST;
+        }
+        if (sender.getUuid().equals(recipient.getUuid())) {
+            return TransferResult.SAME_PLAYER;
+        }
+
+        KnowledgeDefinition def = KnowledgeRegistry.get(knowledgeId);
+        if (def == null) {
+            return TransferResult.INVALID_REQUEST;
+        }
+
+        PlayerKnowledgeState senderState = getState(sender, knowledgeId);
+        if (senderState.currentMinutes < amount) {
+            return TransferResult.INSUFFICIENT_MINUTES;
+        }
+
+        PlayerKnowledgeState recipientState = getState(recipient, knowledgeId);
+        if (!canReceiveMinutes(recipient, knowledgeId, def, recipientState, amount)) {
+            return TransferResult.RECIPIENT_CANNOT_RECEIVE;
+        }
+
+        senderState.currentMinutes -= amount;
+        for (int i = 0; i < amount; i++) {
+            recipientState.currentMinutes += 1;
+            tryLevelUp(recipient, knowledgeId, def, recipientState);
+        }
+
+        sendFullSync(sender);
+        KnowledgeScoreboardHud.updateScoreboard(sender);
+        updateXpBarForKnowledge(sender, knowledgeId, def, senderState);
+
+        sendFullSync(recipient);
+        KnowledgeScoreboardHud.updateScoreboard(recipient);
+        updateXpBarForKnowledge(recipient, knowledgeId, def, recipientState);
+
+        return TransferResult.SUCCESS;
+    }
+
+    /**
+     * Simulates the award first so a transfer never consumes the sender's XP when
+     * the recipient is already maxed or blocked at a proficiency limit.
+     */
+    private static boolean canReceiveMinutes(ServerPlayerEntity recipient,
+                                             Identifier knowledgeId,
+                                             KnowledgeDefinition def,
+                                             PlayerKnowledgeState state,
+                                             int amount) {
+        int simulatedTier = state.tier;
+        int simulatedMinutes = state.currentMinutes;
+
+        for (int i = 0; i < amount; i++) {
+            if (simulatedTier >= def.getMaxTier()) {
+                return false;
+            }
+
+            int needed = def.getMinutesForTier(simulatedTier + 1);
+            if (needed <= 0) {
+                return false;
+            }
+
+            simulatedMinutes += 1;
+            if (simulatedMinutes >= needed) {
+                if (!canReachTier(recipient, knowledgeId, def, simulatedTier + 1)) {
+                    if (simulatedMinutes > needed) {
+                        return false;
+                    }
+                    simulatedMinutes = needed;
+                } else {
+                    simulatedMinutes -= needed;
+                    simulatedTier += 1;
+                }
+            }
+        }
+
+        return true;
     }
 
 

@@ -156,6 +156,17 @@ public final class KnowledgeCommands {
                                     .executes(KnowledgeCommands::executeAdmin))
             );
 
+            // /reward <player> <knowledge> <amount> — transfer your XP minutes to another player
+            dispatcher.register(
+                    CommandManager.literal("reward")
+                            .requires(src -> Permissions.check(src, "knowledgebound.command.reward", 2))
+                            .then(CommandManager.argument("player", EntityArgumentType.player())
+                                    .then(CommandManager.argument("knowledge", StringArgumentType.word())
+                                            .suggests(KNOWLEDGE_SUGGESTIONS)
+                                            .then(CommandManager.argument("amount", IntegerArgumentType.integer(1, 5))
+                                                    .executes(KnowledgeCommands::executeReward))))
+            );
+
             // /checkxp — legacy alias for /kb
             dispatcher.register(
                     CommandManager.literal("checkxp")
@@ -187,6 +198,8 @@ public final class KnowledgeCommands {
                 .append(Text.literal(" — Set a player's tier [OP]").formatted(Formatting.GRAY)), false);
         src.sendFeedback(() -> Text.literal("/kb grant <player> <knowledge> <minutes>").formatted(Formatting.YELLOW)
                 .append(Text.literal(" — Grant XP minutes to a player [OP]").formatted(Formatting.GRAY)), false);
+        src.sendFeedback(() -> Text.literal("/reward <player> <knowledge> <amount>").formatted(Formatting.YELLOW)
+                .append(Text.literal(" — Transfer 1-5 of your XP minutes to another player [Permission]").formatted(Formatting.GRAY)), false);
         src.sendFeedback(() -> Text.literal("/kb give <item>").formatted(Formatting.YELLOW)
                 .append(Text.literal(" — Give yourself a custom KB item [OP]").formatted(Formatting.GRAY)), false);
         src.sendFeedback(() -> Text.literal("/kb reset <player> [knowledge]").formatted(Formatting.YELLOW)
@@ -454,6 +467,69 @@ public final class KnowledgeCommands {
             src.sendFeedback(() -> Text.literal(line).formatted(Formatting.YELLOW), false);
         }
 
+        return Command.SINGLE_SUCCESS;
+    }
+
+    // --------------------------------------------------
+    // /reward <player> <knowledge> <amount>
+    // --------------------------------------------------
+
+    private static int executeReward(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource src = ctx.getSource();
+
+        ServerPlayerEntity sender;
+        try {
+            sender = src.getPlayerOrThrow();
+        } catch (Exception e) {
+            src.sendError(Text.literal("This command can only be used by a player."));
+            return 0;
+        }
+
+        ServerPlayerEntity target;
+        try {
+            target = EntityArgumentType.getPlayer(ctx, "player");
+        } catch (Exception e) {
+            src.sendError(Text.literal("Player not found."));
+            return 0;
+        }
+
+        String name = StringArgumentType.getString(ctx, "knowledge");
+        Identifier knowledgeId = resolveKnowledge(name);
+        if (knowledgeId == null) {
+            src.sendError(Text.literal("Unknown knowledge: " + name + ". Use tab-complete for valid names."));
+            return 0;
+        }
+
+        int amount = IntegerArgumentType.getInteger(ctx, "amount");
+        PlayerKnowledgeManager.TransferResult result =
+                PlayerKnowledgeManager.transferMinutes(sender, target, knowledgeId, amount);
+        String displayName = titleCase(knowledgeId.getPath());
+
+        if (result == PlayerKnowledgeManager.TransferResult.SAME_PLAYER) {
+            src.sendError(Text.literal("You cannot reward yourself."));
+            return 0;
+        }
+        if (result == PlayerKnowledgeManager.TransferResult.INSUFFICIENT_MINUTES) {
+            int available = PlayerKnowledgeManager.getState(sender, knowledgeId).currentMinutes;
+            src.sendError(Text.literal("You need " + amount + " minutes of " + displayName
+                    + " to reward that amount, but you only have " + available + "."));
+            return 0;
+        }
+        if (result == PlayerKnowledgeManager.TransferResult.RECIPIENT_CANNOT_RECEIVE) {
+            src.sendError(Text.literal(target.getName().getString() + " cannot receive " + amount
+                    + " minutes of " + displayName + " right now."));
+            return 0;
+        }
+        if (result != PlayerKnowledgeManager.TransferResult.SUCCESS) {
+            src.sendError(Text.literal("The knowledge reward could not be completed."));
+            return 0;
+        }
+
+        String targetName = target.getName().getString();
+        src.sendFeedback(() -> Text.literal("Rewarded " + amount + " minutes of " + displayName
+                + " to " + targetName + ".").formatted(Formatting.GREEN), false);
+        target.sendMessage(Text.literal(sender.getName().getString() + " rewarded you " + amount
+                + " minutes of " + displayName + "!").formatted(Formatting.GOLD), false);
         return Command.SINGLE_SUCCESS;
     }
 
