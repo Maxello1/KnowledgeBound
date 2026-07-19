@@ -68,7 +68,7 @@ These jobs use the standard tier-difference table. You can attempt to craft item
 | **Smelting** | 3 | Smelting ore in furnaces and blast furnaces |
 | **Cooking** | 3 | Cooking food in furnaces, smokers, and campfires |
 | **Husbandry** | 3 | Taming, breeding, shearing, milking, and riding animals |
-| **Jeweller** | 3 | Crafting jewelry, applying armor trims, socketing gems |
+| **Jeweller** | 3 | Crafting jewelry, applying armor trims, and successful Teapot Jeweling |
 | **Slaughtering** | 3 | Dissecting mob corpses with an axe or cleaver |
 
 ### Gathering (5-Tier)
@@ -287,7 +287,26 @@ Husbandry manages all advanced animal interactions, locking them behind knowledg
 Jeweller governs delicate crafting and ornamentation:
 
 - **Jewelry Crafting:** Items registered in `jewellerCraftingItems` require specific Jeweller tiers to craft.
-- **Smithing Table Gating:** Applying armor trims or socketing gems at the smithing table requires Jeweller knowledge. Attempting without knowledge blocks the action.
+- **Smithing Table Gating:** Only genuine armor-trim changes are gated. Netherite upgrades and unrelated same-item smithing recipes are not treated as trims.
+- **Teapot Jeweling:** Teapot Cosmetics owns jewel recipes, the Gem Table, enchantment application, and structured socket metadata. KnowledgeBound provides only progression checks, per-tier socket limits, and post-success Jeweller XP through its public API.
+
+Armor trims do not consume jewel sockets and do not write jewel metadata. New smithing outputs no longer write the obsolete `knowledgebound_gem_count` field.
+
+### Jeweller integration API
+
+Optional server-side integrations can call `net.maxello.knowledgebound.api.JewellerApi`:
+
+```java
+JewellerApi.isEnabled();
+JewellerApi.getTier(player);
+JewellerApi.getMaximumSockets(player);
+JewellerApi.canApply(player, requiredTier, currentSockets);
+JewellerApi.grantSuccessfulJewelingXp(player);
+```
+
+`canApply` returns a structured result with `ALLOWED`, `SYSTEM_DISABLED`, `TIER_TOO_LOW`, or `SOCKET_LIMIT_REACHED`. It does not send messages or modify items. Call `grantSuccessfulJewelingXp` only after the external transaction has completed successfully.
+
+The maximum socket count comes from `jewellerMaxGemsPerTier` (default `[0, 1, 2, 3]`). The first tier with a positive socket limit is also the minimum tier used for armor trims by default.
 
 ---
 
@@ -544,7 +563,8 @@ Each gathering skill has its own `GatherFailConfig` with `tier0` through `tier4`
 | Key | Default | Description |
 |:---|:---|:---|
 | `jewellerEnabled` | `true` | Master toggle for jeweller system |
-| `jewellerSmithingEnabled` | `true` | Gate smithing table trims/gems behind Jeweller |
+| `jewellerSmithingEnabled` | `true` | Gate genuine armor-trim operations behind Jeweller |
+| `jewellerMaxGemsPerTier` | `[0, 1, 2, 3]` | Maximum Teapot jewel sockets available at each Jeweller tier |
 | `jewellerCraftingItems` | Maps item IDs to tier | Gated jewelry items |
 
 ### Slaughtering Settings

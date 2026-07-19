@@ -749,25 +749,25 @@ public class KnowledgeBoundConfig {
 
     public List<String> _comment_jeweller = List.of(
             "=== Jeweller Settings ===",
-            "Controls jewelry crafting, gem socketing, and armor trims.",
+            "Controls jewelry crafting, Teapot jewel progression, and armor trims.",
             "",
             "jewellerCraftingItems: Maps item IDs to required Jeweller tier (0-3).",
             "  Items listed here are gated behind the Jeweller knowledge when crafted.",
             "  Modify this list to add/remove items controlled by the Jeweller job.",
             "",
-            "jewellerSmithingEnabled: Gate smithing table operations (trims/gems).",
-            "jewellerMaxGemsPerTier: Max gems/trims a player can apply per Jeweller tier.",
+            "jewellerSmithingEnabled: Gate actual armor trim operations.",
+            "jewellerMaxGemsPerTier: Max Teapot jewel sockets per Jeweller tier.",
             "  Index 0 = tier 0, index 3 = tier 3. Default: [0, 1, 2, 3].",
-            "  Tier 0 players cannot apply any trims or gems."
+            "  Tier 0 players cannot apply any jewels; the first tier with a positive limit can apply trims."
     );
 
     /** Master toggle for the entire Jeweller system. */
     public boolean jewellerEnabled = true;
 
-    /** Gate smithing table trim/gem operations behind Jeweller tier. */
+    /** Gate genuine armor-trim operations behind Jeweller tier. */
     public boolean jewellerSmithingEnabled = true;
 
-    /** Max gems/trims a player can apply at each Jeweller tier. */
+    /** Maximum structured Teapot jewel sockets at each Jeweller tier. */
     public int[] jewellerMaxGemsPerTier = new int[] { 0, 1, 2, 3 };
 
     /**
@@ -858,7 +858,7 @@ public class KnowledgeBoundConfig {
         public String husbandryRidingTierLow = "§cYou need Husbandry Tier {minTier} to ride this mount properly.";
 
         // Jeweller messages
-        public String jewellerSmithingTierLow = "§cYou need Jeweller Tier {minTier} to apply this many trims/gems.";
+        public String jewellerSmithingTierLow = "§cYou need Jeweller Tier {minTier} to apply an armor trim.";
         public String jewellerSmithingBlocked = "§cYou need Jeweller knowledge to use the smithing table for trims.";
 
         // Slaughtering messages

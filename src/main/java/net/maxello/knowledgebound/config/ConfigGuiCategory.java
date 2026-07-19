@@ -182,7 +182,7 @@ public final class ConfigGuiCategory {
         )));
         register(new ConfigGuiCategory("jeweller", "Jeweller", Items.DIAMOND, List.of(
                 ConfigGuiEntry.bool("jewellerEnabled", "Jeweller Enabled", "Master toggle for the entire Jeweller system"),
-                ConfigGuiEntry.bool("jewellerSmithingEnabled", "Smithing Gate", "Gate smithing table trims/gems behind Jeweller")
+                ConfigGuiEntry.bool("jewellerSmithingEnabled", "Smithing Gate", "Gate armor trim operations behind Jeweller")
         )));
         register(new ConfigGuiCategory("slaughtering", "Slaughtering", Items.BEEF, List.of(
                 ConfigGuiEntry.bool("slaughteringEnabled", "Slaughtering Enabled", "Master toggle for the slaughtering system"),
