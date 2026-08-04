@@ -172,6 +172,9 @@ public class ScreenHandlerMixin {
                     Identifier id = Registries.ITEM.getId(incoming.getItem());
                     SupervisedJob.JobType jt = SupervisedJobManager.getJobTypeForItem(id);
                     if (jt != null) {
+                        net.maxello.knowledgebound.config.KnowledgeBoundConfig cfg = net.maxello.knowledgebound.config.KnowledgeBoundConfig.INSTANCE;
+                        boolean jobEnabled = jt == SupervisedJob.JobType.SMELTING ? cfg.smeltingEnabled : cfg.cookingEnabled;
+                        if (!jobEnabled) return;
                         // How many items are trying to be added?
                         Slot inputSlot = self.slots.get(0);
                         int currentCount = inputSlot.hasStack() ? inputSlot.getStack().getCount() : 0;
@@ -195,6 +198,9 @@ public class ScreenHandlerMixin {
                     Identifier sourceItemId = Registries.ITEM.getId(sourceStack.getItem());
                     SupervisedJob.JobType jt = SupervisedJobManager.getJobTypeForItem(sourceItemId);
                     if (jt != null) {
+                        net.maxello.knowledgebound.config.KnowledgeBoundConfig cfg = net.maxello.knowledgebound.config.KnowledgeBoundConfig.INSTANCE;
+                        boolean jobEnabled = jt == SupervisedJob.JobType.SMELTING ? cfg.smeltingEnabled : cfg.cookingEnabled;
+                        if (!jobEnabled) return;
                         // Check if there's already an item in the input slot
                         ItemStack currentInput = self.slots.get(0).getStack();
                         if (currentInput.isEmpty()) {
