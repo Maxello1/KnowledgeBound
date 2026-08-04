@@ -536,6 +536,10 @@ public class KnowledgeEvents {
             // what are we holding?
             KnowledgeDefinition.ToolTier toolTier =
                     ToolTierHelper.fromItem(player.getMainHandStack());
+            if (toolTier != KnowledgeDefinition.ToolTier.BOW
+                    && toolTier != KnowledgeDefinition.ToolTier.CROSSBOW) {
+                toolTier = ToolTierHelper.fromItem(player.getOffHandStack());
+            }
 
             // Will only grant XP if that tier is valid for the current knowledge tier
             grantXpIfValidTool(player, rangedDef, toolTier);
