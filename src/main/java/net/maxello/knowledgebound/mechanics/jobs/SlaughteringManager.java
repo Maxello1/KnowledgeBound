@@ -247,7 +247,7 @@ public final class SlaughteringManager {
             }
 
             // Actually roll the dice and generate the loot
-            performDissection(serverPlayer, entity, isCleaver, cfg);
+            performDissection(serverPlayer, entity, isCleaver, cfg, hand);
 
             // Cancel further processing so they don't accidentally ride the dead horse or milk the dead cow
             return ActionResult.SUCCESS;
@@ -255,7 +255,8 @@ public final class SlaughteringManager {
     }
 
     private static void performDissection(ServerPlayerEntity player, Entity corpse,
-                                           boolean usedCleaver, KnowledgeBoundConfig cfg) {
+                                           boolean usedCleaver, KnowledgeBoundConfig cfg,
+                                           net.minecraft.util.Hand hand) {
         if (!(corpse.getWorld() instanceof ServerWorld serverWorld)) return;
 
         int slaughterTier = PlayerKnowledgeManager.getTier(player, KnowledgeRegistry.SLAUGHTERING_ID);
@@ -267,7 +268,7 @@ public final class SlaughteringManager {
         double failRoll = RANDOM.nextDouble();
 
         if (failRoll < failChance) {
-            handleFailedDissection(player, corpse, serverWorld, cfg);
+            handleFailedDissection(player, corpse, serverWorld, cfg, hand);
             return;
         }
 
@@ -319,9 +320,9 @@ public final class SlaughteringManager {
                 10, 0.3, 0.3, 0.3, 0.02);
 
         // Take durability off their tool
-        ItemStack held = player.getMainHandStack();
+        ItemStack held = player.getStackInHand(hand);
         if (!held.isEmpty()) {
-            held.damage(1, player, LivingEntity.getSlotForHand(player.getActiveHand()));
+            held.damage(1, player, LivingEntity.getSlotForHand(hand));
         }
 
         // Give them XP for trying
@@ -351,7 +352,8 @@ public final class SlaughteringManager {
      * Handle a failed dissection — drops 1 rotten flesh, plays an ugly sound, destroys corpse.
      */
     private static void handleFailedDissection(ServerPlayerEntity player, Entity corpse,
-                                                ServerWorld serverWorld, KnowledgeBoundConfig cfg) {
+                                                ServerWorld serverWorld, KnowledgeBoundConfig cfg,
+                                                net.minecraft.util.Hand hand) {
         
         // Toss out a single piece of rotten flesh as a consolation prize
         ItemStack rottenFlesh = new ItemStack(Items.ROTTEN_FLESH, 1);
@@ -371,9 +373,9 @@ public final class SlaughteringManager {
                 corpse.getX(), corpse.getY() + 0.5, corpse.getZ(),
                 15, 0.4, 0.3, 0.4, 0.03);
 
-        ItemStack held = player.getMainHandStack();
+        ItemStack held = player.getStackInHand(hand);
         if (!held.isEmpty()) {
-            held.damage(1, player, LivingEntity.getSlotForHand(player.getActiveHand()));
+            held.damage(1, player, LivingEntity.getSlotForHand(hand));
         }
 
         // Even failing teaches you something!
